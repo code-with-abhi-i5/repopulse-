@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useDemoStore, useRealtimeStore } from '../stores'
 import Github from '../components/icons/Github.jsx'
+import Hero3DTiltCard from '../components/Hero3DTiltCard.jsx'
+import HeroBackground from '../components/HeroBackground.jsx'
 import { mockRepositories, mockContributors } from '../data/mock'
 import {
   Zap,
@@ -30,6 +33,8 @@ import {
   Check,
   RefreshCw,
   FolderGit2,
+  Menu,
+  X,
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -39,6 +44,8 @@ export default function LandingPage() {
 
   // State for animated metrics
   const [healthScore, setHealthScore] = useState(0)
+  const [pulseTrigger, setPulseTrigger] = useState(0)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [activeCockpitTab, setActiveCockpitTab] = useState('fleet')
   const [selectedAlertChannel, setSelectedAlertChannel] = useState('slack')
   const [simulatedToast, setSimulatedToast] = useState(null)
@@ -163,6 +170,7 @@ export default function LandingPage() {
     }
 
     setLiveStreamEvents((prev) => [newEvent, ...prev.slice(0, 4)])
+    setPulseTrigger((p) => p + 1)
     if (addLiveEvent) {
       addLiveEvent(newEvent)
     }
@@ -185,15 +193,12 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 relative overflow-x-hidden font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
-      {/* Dynamic Background Atmosphere */}
-      <div className="ambient-glow -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-indigo-600/25 via-violet-600/15 to-transparent opacity-80" />
-      <div className="ambient-glow top-[480px] -left-60 w-[700px] h-[700px] bg-cyan-600/10" />
-      <div className="ambient-glow top-[1400px] -right-60 w-[750px] h-[750px] bg-purple-600/12" />
-      <div className="ambient-glow bottom-0 left-1/3 w-[600px] h-[600px] bg-indigo-600/10" />
+      {/* Next-Level Futuristic Hero Background System */}
+      <HeroBackground />
 
-      {/* Subtle Engineered Grids */}
-      <div className="absolute inset-0 dot-grid opacity-35 pointer-events-none" />
-      <div className="absolute inset-0 grid-lines opacity-25 pointer-events-none" />
+      {/* Lower Page Ambient Lighting */}
+      <div className="ambient-glow top-[1400px] -right-60 w-[750px] h-[750px] bg-purple-600/12 pointer-events-none" />
+      <div className="ambient-glow bottom-0 left-1/3 w-[600px] h-[600px] bg-indigo-600/10 pointer-events-none" />
 
       {/* Floating Simulation Toast */}
       {simulatedToast && (
@@ -222,68 +227,177 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* Navigation Header */}
-      <header className="sticky top-0 z-50 glass-panel border-b border-white/[0.08] backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4 xl:gap-8">
-            {/* Logo & Brand */}
-            <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 ring-1 ring-white/20 group-hover:scale-105 transition-transform">
+      {/* Floating Island Navigation Dock */}
+      <header className="sticky top-4 z-50 max-w-6xl mx-auto px-4 sm:px-6">
+        <nav className="relative rounded-2xl sm:rounded-full bg-slate-950/80 border border-white/[0.12] backdrop-blur-2xl shadow-2xl shadow-black/80 px-4 sm:px-6 h-16 flex items-center justify-between transition-all">
+          {/* Subtle Ambient Island Aura */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-cyan-500/20 rounded-2xl sm:rounded-full blur-sm opacity-50 -z-10 pointer-events-none" />
+
+          {/* Left: Brand Identity */}
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/40 ring-1 ring-white/20 group-hover:scale-105 group-hover:rotate-6 transition-all duration-300">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-2">
                 <span className="text-base sm:text-lg font-bold tracking-tight text-white group-hover:text-indigo-200 transition-colors">
                   Repo<span className="text-indigo-400">Pulse</span>
                 </span>
-                <span className="hidden sm:inline-block text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-live" />
                   v2.4 PRO
                 </span>
               </div>
             </Link>
 
-            {/* Nav Links (Desktop) */}
-            <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
-              <a href="#capabilities" className="whitespace-nowrap hover:text-white transition-colors">
+            {/* Desktop Navigation Links (Pill Style) */}
+            <div className="hidden md:flex items-center gap-1 pl-2 border-l border-white/10 text-xs font-semibold text-slate-300">
+              <a
+                href="#cockpit"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all"
+              >
+                Fleet Cockpit
+              </a>
+              <a
+                href="#capabilities"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all"
+              >
                 Capabilities
               </a>
-              <a href="#faq" className="whitespace-nowrap hover:text-white transition-colors">
+              <a
+                href="#faq"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all"
+              >
                 FAQ
               </a>
-            </nav>
+            </div>
           </div>
 
           {/* Right Action Cluster */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            {/* GitHub Link */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Live Telemetry Ping Indicator */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[11px] font-mono font-semibold text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-live" />
+              <span>TLS 1.3 (24ms)</span>
+            </div>
+
+            {/* GitHub Stars Button */}
             <a
               href="https://github.com/Zectral/repopulse"
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-white/20 text-xs font-semibold text-slate-200 transition-all shadow-sm hover:scale-[1.02]"
             >
-              <Github className="w-4 h-4" />
+              <Github className="w-3.5 h-3.5" />
               <span>GitHub</span>
+              <span className="text-[10px] font-mono text-amber-400 flex items-center gap-0.5 pl-1 border-l border-white/10">
+                <Star className="w-3 h-3 fill-amber-400" />
+                1,248
+              </span>
             </a>
 
-            {/* Launch CTA */}
+            {/* Next-Level Launch CTA */}
             <button
               onClick={handleLaunch}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/10 transition-all hover:scale-[1.03] active:scale-[0.98]"
+              className="group flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-lg shadow-indigo-500/35 border border-indigo-400/30 transition-all hover:scale-105 active:scale-95 btn-glow"
             >
               <span>Launch App</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setMobileNavOpen((prev) => !prev)}
+              className="md:hidden p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
-        </div>
+        </nav>
+
+        {/* Mobile Dropdown Menu (AnimatePresence) */}
+        <AnimatePresence>
+          {mobileNavOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden mt-2 p-4 rounded-2xl bg-slate-950/95 border border-white/15 backdrop-blur-2xl shadow-2xl space-y-3"
+            >
+              <div className="flex flex-col space-y-1 text-sm font-medium text-slate-200">
+                <a
+                  href="#cockpit"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  Fleet Cockpit
+                </a>
+                <a
+                  href="#capabilities"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  Capabilities
+                </a>
+                <a
+                  href="#faq"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  FAQ
+                </a>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                <a
+                  href="https://github.com/Zectral/repopulse"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  <Github className="w-4 h-4" />
+                  <span>GitHub ★ 1,248</span>
+                </a>
+
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-live" />
+                  <span>TLS 1.3</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Hero Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-16">
-        <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 md:pt-24 pb-16">
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.05,
+              },
+            },
+          }}
+          className="flex flex-col items-center text-center max-w-4xl mx-auto"
+        >
           {/* Top Pill / HackQubit Badge */}
-          <div
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 15 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+            }}
+            animate={{ y: [0, -3, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
             onClick={handleLaunch}
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-xs text-slate-300 transition-all cursor-pointer shadow-lg shadow-indigo-500/10 mb-8 group"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 text-xs text-slate-300 transition-all cursor-pointer shadow-lg shadow-indigo-500/10 mb-8 group backdrop-blur-xl"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-live" />
             <span className="font-semibold text-white">HackQubit 2026 Champion Edition</span>
@@ -291,85 +405,122 @@ export default function LandingPage() {
             <span className="text-indigo-400 group-hover:text-indigo-300 group-hover:translate-x-0.5 transition-all flex items-center gap-1 font-semibold">
               Explore Live Mission Control <ChevronRight className="w-3.5 h-3.5" />
             </span>
-          </div>
+          </motion.div>
 
           {/* Main Hero Headline */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] mb-6">
+          <motion.h1
+            variants={{
+              hidden: { opacity: 0, y: 25 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+            }}
+            className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] mb-6"
+          >
             Autonomous Mission Control for{' '}
             <span className="gradient-accent-text">High-Velocity</span> Engineering Teams.
-          </h1>
+          </motion.h1>
 
           {/* Hero Subheadline */}
-          <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl leading-relaxed mb-10">
+          <motion.p
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+            }}
+            className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl leading-relaxed mb-10"
+          >
             RepoPulse synthesizes repository commits, review latency SLAs, CI failure telemetry, and
             contributor streak dynamics into a unified executive cockpit.
-          </p>
+          </motion.p>
 
           {/* Primary Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto justify-center mb-14">
-            <button
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+            }}
+            className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto justify-center mb-14"
+          >
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleLaunch}
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-xl shadow-indigo-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] btn-glow"
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-xl shadow-indigo-500/30 transition-all btn-glow"
             >
               <Play className="w-4 h-4 fill-white" />
               <span>Launch Live Cockpit</span>
               <span className="ml-1 text-[11px] font-mono px-2 py-0.5 rounded bg-white/20 text-white font-medium">
                 Instant Demo
               </span>
-            </button>
+            </motion.button>
 
-            <a
+            <motion.a
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               href="https://github.com/Zectral/repopulse"
               target="_blank"
               rel="noreferrer"
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl font-medium text-sm text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-white/20 transition-all shadow-md hover:scale-[1.01]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl font-medium text-sm text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-white/20 transition-all shadow-md"
             >
               <Github className="w-4 h-4" />
               <span>Inspect Source Repository</span>
-            </a>
+            </motion.a>
 
-            <button
-              onClick={() => handleSimulateWebhook('push')}
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                handleSimulateWebhook('push')
+              }}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-4 rounded-xl font-medium text-xs text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 transition-all"
             >
               <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
               <span>Simulate Webhook</span>
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* Fleet Statistics KPI Strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-white/[0.08] w-full max-w-4xl text-center">
-            <div className="p-4 sm:p-5 rounded-2xl glass-card-interactive">
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+            }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-white/[0.08] w-full max-w-4xl text-center"
+          >
+            <motion.div whileHover={{ y: -4, scale: 1.02 }} className="p-4 sm:p-5 rounded-2xl glass-card-interactive cursor-default">
               <div className="text-3xl sm:text-4xl font-black text-white tracking-tight tabular-nums">6 Repos</div>
               <div className="text-xs text-slate-400 mt-1 font-medium">Fleet Monitored</div>
               <div className="text-[11px] text-emerald-400 font-semibold mt-1">● 100% Active</div>
-            </div>
+            </motion.div>
 
-            <div className="p-4 sm:p-5 rounded-2xl glass-card-interactive">
+            <motion.div whileHover={{ y: -4, scale: 1.02 }} className="p-4 sm:p-5 rounded-2xl glass-card-interactive cursor-default">
               <div className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight tabular-nums">94.2 <span className="text-sm font-normal text-slate-400">/ 100</span></div>
               <div className="text-xs text-slate-400 mt-1 font-medium">Algorithmic Health Score</div>
               <div className="text-[11px] text-emerald-400 font-semibold mt-1">▲ +3.4% This Week</div>
-            </div>
+            </motion.div>
 
-            <div className="p-4 sm:p-5 rounded-2xl glass-card-interactive">
+            <motion.div whileHover={{ y: -4, scale: 1.02 }} className="p-4 sm:p-5 rounded-2xl glass-card-interactive cursor-default">
               <div className="text-3xl sm:text-4xl font-black text-indigo-400 tracking-tight tabular-nums">2.4h</div>
               <div className="text-xs text-slate-400 mt-1 font-medium">Avg PR Review Latency</div>
               <div className="text-[11px] text-indigo-400 font-semibold mt-1">38% Faster than SLA</div>
-            </div>
+            </motion.div>
 
-            <div className="p-4 sm:p-5 rounded-2xl glass-card-interactive">
+            <motion.div whileHover={{ y: -4, scale: 1.02 }} className="p-4 sm:p-5 rounded-2xl glass-card-interactive cursor-default">
               <div className="text-3xl sm:text-4xl font-black text-violet-400 tracking-tight tabular-nums">&lt; 45ms</div>
               <div className="text-xs text-slate-400 mt-1 font-medium">Live Telemetry Ingestion</div>
               <div className="text-[11px] text-violet-400 font-semibold mt-1">Zero-Drop Backpressure</div>
-            </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        {/* Subtle 3D Cockpit Indicator */}
+        <div id="cockpit" className="mt-14 mb-8 flex items-center justify-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/80 border border-indigo-500/30 backdrop-blur-md shadow-lg shadow-indigo-500/10 text-xs font-mono text-slate-300">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Interactive 3D Cockpit • Hover cursor to experience 3D spatial depth</span>
           </div>
         </div>
 
-        {/* HERO SHOWCASE: Interactive Live Cockpit Window */}
-        <div id="cockpit" className="mt-16 max-w-6xl mx-auto relative group">
-          {/* Subtle Outer Neon Aura */}
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500/30 via-purple-500/25 to-cyan-500/30 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
+        {/* HERO SHOWCASE: Interactive Live Cockpit Window with 3D Tilt */}
+        <Hero3DTiltCard className="max-w-6xl mx-auto">
           <div className="relative rounded-2xl glass-card overflow-hidden shadow-2xl border border-white/15">
             {/* Window Titlebar */}
             <div className="px-5 py-3.5 bg-slate-900/90 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
@@ -716,7 +867,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Hero3DTiltCard>
       </section>
 
       {/* Bento Grid Architecture: Core Platform Capabilities */}
