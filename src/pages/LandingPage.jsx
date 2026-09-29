@@ -1116,11 +1116,11 @@ export default function LandingPage() {
             <div className="pt-4 flex items-center justify-between text-xs text-slate-400">
               <span>Supports conditional filters (e.g. Star spikes, CI breaks, Force pushes)</span>
               <Link
-                to="/alerts"
+                to="/activity"
                 onClick={() => setDemoMode(true)}
                 className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1"
               >
-                Configure Alert Rules <ArrowRight className="w-3 h-3" />
+                View Live Telemetry <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </div>
@@ -1443,9 +1443,6 @@ export default function LandingPage() {
               </Link>
               <Link to="/contributors" onClick={() => setDemoMode(true)} className="hover:text-white transition-colors">
                 Contributors
-              </Link>
-              <Link to="/alerts" onClick={() => setDemoMode(true)} className="hover:text-white transition-colors">
-                Alerts
               </Link>
               <Link to="/reports" onClick={() => setDemoMode(true)} className="hover:text-white transition-colors">
                 Reports

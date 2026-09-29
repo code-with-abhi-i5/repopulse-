@@ -25,6 +25,9 @@ export interface Repository {
   archived: boolean;
   topics: string[];
   healthScore: number;
+  teamName?: string;
+  hackathonBatch?: string;
+  antiCheatStatus?: 'VERIFIED_FRESH' | 'PRE_EXISTING_FLAG' | 'AUDIT_PENDING';
 }
 
 export interface RepositorySnapshot {
@@ -111,6 +114,9 @@ export interface Contributor {
   name: string;
   avatarUrl: string;
   commits: number;
+  pushesCount?: number;
+  teamName?: string;
+  primaryRepo?: string;
   additions: number;
   deletions: number;
   activeDays: number;
@@ -188,11 +194,17 @@ export interface ActivityEvent {
   type: ActivityEventType;
   repositoryId: string;
   repositoryName: string;
+  teamName?: string;
   actor: ContributorRef;
   timestamp: string;
   title: string;
   description?: string;
   url?: string;
+  branch?: string;
+  linesAdded?: number;
+  linesDeleted?: number;
+  commitCount?: number;
+  commitSha?: string;
 }
 
 // --- Alert ---

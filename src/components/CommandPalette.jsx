@@ -9,7 +9,6 @@ import {
   GitPullRequest,
   CircleDot,
   BarChart3,
-  Bell,
   FileText,
   Settings,
   Search,
@@ -26,7 +25,6 @@ const commands = [
   { id: 'pull-requests', label: 'View Pull Requests', icon: GitPullRequest, path: '/pull-requests' },
   { id: 'issues', label: 'View Issues', icon: CircleDot, path: '/issues' },
   { id: 'analytics', label: 'Open Analytics', icon: BarChart3, path: '/analytics' },
-  { id: 'alerts', label: 'Open Alerts', icon: Bell, path: '/alerts' },
   { id: 'reports', label: 'Generate Report', icon: FileText, path: '/reports' },
   { id: 'settings', label: 'Open Settings', icon: Settings, path: '/settings' },
 ]

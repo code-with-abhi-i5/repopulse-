@@ -8,7 +8,6 @@ import {
   GitPullRequest,
   CircleDot,
   BarChart3,
-  Bell,
   FileText,
   Settings,
   ChevronLeft,
@@ -27,7 +26,6 @@ const navItems = [
   { path: '/pull-requests', label: 'Pull Requests', icon: GitPullRequest },
   { path: '/issues', label: 'Issues Triage', icon: CircleDot },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { path: '/alerts', label: 'Alert Rules', icon: Bell },
   { path: '/reports', label: 'Reports', icon: FileText },
 ]
 

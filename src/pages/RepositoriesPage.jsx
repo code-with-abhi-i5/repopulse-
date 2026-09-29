@@ -22,6 +22,13 @@ import {
   ShieldCheck,
   TrendingUp,
   ChevronRight,
+  Users,
+  UploadCloud,
+  CheckCircle2,
+  Trash2,
+  ShieldAlert,
+  FileText,
+  Copy,
 } from 'lucide-react'
 
 const languageColors = {
@@ -41,8 +48,15 @@ export default function RepositoriesPage() {
   const [sortBy, setSortBy] = useState('health')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'table'
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [newRepoUrl, setNewRepoUrl] = useState('')
+  const [importTab, setImportTab] = useState('bulk') // 'bulk' | 'rows'
+  const [bulkText, setBulkText] = useState('')
+  const [teamRows, setTeamRows] = useState([
+    { id: 'row-1', teamName: 'Team CodeQuarks', repoUrl: 'https://github.com/code-with-abhi-i5/repopulse-' },
+    { id: 'row-2', teamName: 'ByteWarriors', repoUrl: 'https://github.com/facebook/react' },
+  ])
+  const [antiCheatAuditEnabled, setAntiCheatAuditEnabled] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
+  const [importNotification, setImportNotification] = useState(null)
   const [compareList, setCompareList] = useState([])
   const [isCompareOpen, setIsCompareOpen] = useState(false)
 
@@ -52,12 +66,162 @@ export default function RepositoriesPage() {
     return ['all', ...Array.from(langs)]
   }, [repositories])
 
+  // Parse bulk text (supports comma, pipe, tab, or newline)
+  const parseBulkInput = (text) => {
+    if (!text.trim()) return []
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+    return lines.map((line, idx) => {
+      let teamName = ''
+      let repoUrl = ''
+      if (line.includes(',')) {
+        const parts = line.split(',')
+        teamName = parts[0]?.trim()
+        repoUrl = parts.slice(1).join(',').trim()
+      } else if (line.includes('|')) {
+        const parts = line.split('|')
+        teamName = parts[0]?.trim()
+        repoUrl = parts.slice(1).join('|').trim()
+      } else if (line.includes('\t')) {
+        const parts = line.split('\t')
+        teamName = parts[0]?.trim()
+        repoUrl = parts.slice(1).join('\t').trim()
+      } else {
+        repoUrl = line.trim()
+        const cleanEnd = repoUrl.replace(/\/+$/, '')
+        const segs = cleanEnd.replace('https://github.com/', '').split('/')
+        const namePart = segs[1] || `Team #${idx + 1}`
+        teamName = `Team ${namePart}`
+      }
+
+      const cleanUrl = repoUrl.replace(/\/+$/, '')
+      const parts = cleanUrl.replace('https://github.com/', '').split('/')
+      const owner = parts[0] || 'hackathon'
+      const name = parts[1] || `project-${idx + 1}`
+
+      return {
+        id: `team-entry-${idx}`,
+        teamName: teamName || `Team ${name}`,
+        repoUrl: cleanUrl,
+        owner,
+        name,
+        fullName: `${owner}/${name}`,
+        isValid: Boolean(owner && name && cleanUrl.includes('/')),
+      }
+    })
+  }
+
+  const parsedBulkTeams = useMemo(() => {
+    return parseBulkInput(bulkText)
+  }, [bulkText])
+
+  // Sample hackathon teams loader
+  const handleLoadSampleTeams = () => {
+    const sample = `Team CodeQuarks, https://github.com/code-with-abhi-i5/repopulse-
+ByteWarriors, https://github.com/facebook/react
+QuantumCraft, https://github.com/vercel/next.js
+AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
+    setBulkText(sample)
+    setImportTab('bulk')
+  }
+
+  // Row-by-row form helpers
+  const handleAddRow = () => {
+    setTeamRows((prev) => [
+      ...prev,
+      { id: `row-${Date.now()}`, teamName: '', repoUrl: '' },
+    ])
+  }
+
+  const handleUpdateRow = (id, field, value) => {
+    setTeamRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    )
+  }
+
+  const handleDeleteRow = (id) => {
+    setTeamRows((prev) => prev.filter((r) => r.id !== id))
+  }
+
+  // Handle bulk import submission
+  const handleExecuteImport = (e) => {
+    e.preventDefault()
+    let teamsToImport = []
+
+    if (importTab === 'bulk') {
+      teamsToImport = parsedBulkTeams.filter((t) => t.isValid)
+    } else {
+      teamsToImport = teamRows
+        .filter((r) => r.repoUrl.trim())
+        .map((r, idx) => {
+          const cleanUrl = r.repoUrl.replace(/\/+$/, '').trim()
+          const parts = cleanUrl.replace('https://github.com/', '').split('/')
+          const owner = parts[0] || 'hackathon'
+          const name = parts[1] || `team-repo-${idx + 1}`
+          return {
+            id: `team-row-${idx}`,
+            teamName: r.teamName.trim() || `Team ${name}`,
+            repoUrl: cleanUrl,
+            owner,
+            name,
+            fullName: `${owner}/${name}`,
+            isValid: true,
+          }
+        })
+    }
+
+    if (teamsToImport.length === 0) return
+
+    setIsImporting(true)
+    setTimeout(() => {
+      const newRepos = teamsToImport.map((t, idx) => {
+        const randomScore = Math.floor(Math.random() * 14) + 84 // 84 to 97
+        return {
+          id: `repo-imported-${Date.now()}-${idx}`,
+          githubId: Math.floor(Math.random() * 1000000) + 90000000,
+          name: t.name,
+          fullName: t.fullName,
+          owner: t.owner,
+          description: `Hackathon participant project registered for ${t.teamName}. Synced with Anti-Cheat & Telemetry engine.`,
+          visibility: 'public',
+          defaultBranch: 'main',
+          license: 'MIT',
+          language: idx % 3 === 0 ? 'TypeScript' : idx % 3 === 1 ? 'Python' : 'JavaScript',
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * (8 + idx * 3)).toISOString(),
+          updatedAt: new Date().toISOString(),
+          pushedAt: new Date().toISOString(),
+          stars: Math.floor(Math.random() * 80) + 10,
+          forks: Math.floor(Math.random() * 15) + 2,
+          watchers: Math.floor(Math.random() * 25) + 3,
+          openIssues: Math.floor(Math.random() * 4),
+          sizeKb: Math.floor(Math.random() * 7000) + 2500,
+          archived: false,
+          topics: ['hackathon-2026', 'live-telemetry', 'verified-fresh'],
+          healthScore: randomScore,
+          teamName: t.teamName,
+          antiCheatStatus: 'VERIFIED_FRESH',
+        }
+      })
+
+      setRepositories((prev) => [...newRepos, ...prev])
+      setIsImporting(false)
+      setIsAddModalOpen(false)
+      setBulkText('')
+      setImportNotification({
+        title: 'Hackathon Teams Registered',
+        message: `Successfully connected ${newRepos.length} participant teams with live telemetry & anti-cheat audit.`,
+      })
+      setTimeout(() => setImportNotification(null), 5000)
+    }, 1200)
+  }
+
   // Filter & sort logic
   const filteredRepos = useMemo(() => {
     return repositories
       .filter((repo) => {
         const matchesSearch =
           repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          repo.owner?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          repo.teamName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.topics?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
 
@@ -76,47 +240,6 @@ export default function RepositoriesPage() {
       })
   }, [repositories, searchQuery, selectedLanguage, sortBy])
 
-  // Handle mock repo import
-  const handleImportRepo = (e) => {
-    e.preventDefault()
-    if (!newRepoUrl) return
-
-    setIsImporting(true)
-    setTimeout(() => {
-      const parts = newRepoUrl.replace('https://github.com/', '').split('/')
-      const owner = parts[0] || 'organization'
-      const name = parts[1] || 'new-repository'
-      const newRepo = {
-        id: `repo-${Date.now()}`,
-        githubId: Math.floor(Math.random() * 1000000),
-        name,
-        fullName: `${owner}/${name}`,
-        owner,
-        description: 'Newly connected repository synced with RepoPulse intelligence engine.',
-        visibility: 'public',
-        defaultBranch: 'main',
-        license: 'MIT',
-        language: 'TypeScript',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        pushedAt: new Date().toISOString(),
-        stars: Math.floor(Math.random() * 50) + 1,
-        forks: Math.floor(Math.random() * 10) + 1,
-        watchers: Math.floor(Math.random() * 15) + 1,
-        openIssues: Math.floor(Math.random() * 5),
-        sizeKb: 4200,
-        archived: false,
-        topics: ['monitored', 'sync-active'],
-        healthScore: 88,
-      }
-
-      setRepositories([newRepo, ...repositories])
-      setIsImporting(false)
-      setIsAddModalOpen(false)
-      setNewRepoUrl('')
-    }, 1200)
-  }
-
   // Toggle repository comparison
   const toggleCompare = (repoId) => {
     setCompareList((prev) => {
@@ -134,18 +257,48 @@ export default function RepositoriesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Import Success Notification */}
+      {importNotification && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-indigo-500/15 border border-emerald-500/30 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                {importNotification.title}
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+                  LIVE TELEMETRY ON
+                </span>
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">{importNotification.message}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setImportNotification(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Top Banner / Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5 flex-wrap">
             <FolderGit2 className="w-7 h-7 text-indigo-400" />
-            Monitored Repositories
+            Hackathon Fleet & Team Repos
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Admin Portal
+            </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              {filteredRepos.length} Active
+              {filteredRepos.length} Teams Monitored
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Real-time GitHub health scores, pull request latency, and code velocity tracking across your fleet.
+            Automated code evaluator, commit burst detector, and anti-cheat tracking for all hackathon team repositories.
           </p>
         </div>
 
@@ -162,10 +315,10 @@ export default function RepositoriesPage() {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Plus className="w-4 h-4" />
-            Connect Repository
+            <UploadCloud className="w-4 h-4" />
+            Bulk Import Teams & Repos
           </button>
         </div>
       </div>
@@ -272,6 +425,21 @@ export default function RepositoriesPage() {
                   {/* Card Header: Owner/Name + Health Badge */}
                   <div className="flex items-start justify-between gap-3 mb-2.5">
                     <div className="min-w-0">
+                      {/* Team Name Badge */}
+                      {repo.teamName && (
+                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wide bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            <Users className="w-3 h-3 text-indigo-400" />
+                            {repo.teamName}
+                          </span>
+                          {repo.antiCheatStatus === 'VERIFIED_FRESH' && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Verified repo created during hackathon period">
+                              <ShieldCheck className="w-2.5 h-2.5" />
+                              Fresh Repo
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <span className="text-xs text-slate-500 font-mono block truncate">
                         {repo.owner}
                       </span>
@@ -403,6 +571,7 @@ export default function RepositoriesPage() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="border-b border-white/[0.08] bg-slate-950/40 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                <th className="py-3.5 px-4">Team</th>
                 <th className="py-3.5 px-4">Repository</th>
                 <th className="py-3.5 px-4">Pulse Health</th>
                 <th className="py-3.5 px-4">Language</th>
@@ -419,6 +588,23 @@ export default function RepositoriesPage() {
                 const isCompared = compareList.includes(repo.id)
                 return (
                   <tr key={repo.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 px-4">
+                      {repo.teamName ? (
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
+                            <Users className="w-3 h-3 text-indigo-400" />
+                            {repo.teamName}
+                          </span>
+                          {repo.antiCheatStatus === 'VERIFIED_FRESH' && (
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                              <ShieldCheck className="w-3 h-3" /> Fresh
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">Unassigned</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <Link
                         to={`/repositories/${repo.owner}/${repo.name}`}
@@ -561,63 +747,231 @@ export default function RepositoriesPage() {
         </div>
       )}
 
-      {/* Connect Repo Modal */}
+      {/* Bulk & Multi-Team Hackathon Import Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md p-6 rounded-2xl glass-card border border-white/15 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2">
-                <FolderGit2 className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-base font-bold text-white">Connect GitHub Repository</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="relative w-full max-w-2xl p-6 sm:p-7 rounded-2xl glass-card border border-white/15 shadow-2xl space-y-5 my-8">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-white/[0.08] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    Hackathon Admin: Bulk Team & Repo Import
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
+                      BATCH SCANNER
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Paste multiple repositories with team names from spreadsheets or forms to monitor telemetry and anti-cheat live.
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06]"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleImportRepo} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-200 block mb-1.5">
-                  GitHub Repository URL or "owner/repo"
-                </label>
+            {/* Mode Switcher: Bulk Text Paste vs Row-by-Row */}
+            <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-950/60 border border-white/10">
+              <button
+                type="button"
+                onClick={() => setImportTab('bulk')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  importTab === 'bulk'
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Bulk Text / Spreadsheet Paste
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportTab('rows')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  importTab === 'rows'
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Row-by-Row Entry ({teamRows.length})
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteImport} className="space-y-4">
+              {importTab === 'bulk' ? (
+                /* Tab 1: Bulk Textarea */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Paste Lines (Team Name, Repo Link or one URL per line):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleLoadSampleTeams}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium underline flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Load 4 Sample Hackathon Teams
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={6}
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    placeholder={`Team Alpha, https://github.com/facebook/react\nTeam Nexus, https://github.com/vercel/next.js\nCyberDevs | https://github.com/tailwindlabs/tailwindcss\nhttps://github.com/vitejs/vite`}
+                    className="w-full px-4 py-3 text-xs font-mono rounded-xl bg-slate-950/70 border border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 text-slate-100 placeholder:text-slate-600 leading-relaxed resize-none"
+                  />
+
+                  {/* Parse Preview Status */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/50 border border-white/[0.06] text-xs">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <span>Detected:</span>
+                      <span className="font-mono font-bold text-white bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md">
+                        {parsedBulkTeams.filter((t) => t.isValid).length} Valid Teams
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-slate-400">
+                      Supports comma (<code className="text-indigo-300">,</code>), pipe (<code className="text-indigo-300">|</code>), or Tab from Google Sheets
+                    </div>
+                  </div>
+
+                  {/* Quick Preview Chips */}
+                  {parsedBulkTeams.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-lg bg-black/30 border border-white/[0.04]">
+                      {parsedBulkTeams.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-mono ${
+                            item.isValid
+                              ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+                          }`}
+                        >
+                          <Users className="w-3 h-3 opacity-70" />
+                          <span className="font-bold">{item.teamName}:</span>
+                          <span className="opacity-80">{item.name || item.raw}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Tab 2: Row-by-Row Inputs */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Add Participating Teams & GitHub Repositories:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddRow}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Row
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {teamRows.map((row, index) => (
+                      <div
+                        key={row.id}
+                        className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-white/10"
+                      >
+                        <span className="text-[11px] font-mono text-slate-500 w-5 text-center">
+                          {index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Team Name (e.g. Team Alpha)"
+                          value={row.teamName}
+                          onChange={(e) => handleUpdateRow(row.id, 'teamName', e.target.value)}
+                          className="w-1/3 px-3 py-1.5 text-xs rounded-lg bg-slate-900 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="https://github.com/org/repo"
+                          value={row.repoUrl}
+                          onChange={(e) => handleUpdateRow(row.id, 'repoUrl', e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-slate-900 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                        />
+                        {teamRows.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRow(row.id)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Remove row"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Anti-Cheat Automated Audit Setting */}
+              <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 flex items-start gap-3">
                 <input
-                  type="text"
-                  required
-                  placeholder="https://github.com/facebook/react or vercel/next.js"
-                  value={newRepoUrl}
-                  onChange={(e) => setNewRepoUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-950/60 border border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 text-white placeholder:text-slate-500"
+                  type="checkbox"
+                  id="antiCheatCheckbox"
+                  checked={antiCheatAuditEnabled}
+                  onChange={(e) => setAntiCheatAuditEnabled(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-white/20 bg-slate-900"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  RepoPulse will immediately backfill commit activity, calculate health metrics, and stream webhook events.
-                </span>
+                <label htmlFor="antiCheatCheckbox" className="text-xs cursor-pointer select-none">
+                  <span className="font-bold text-white flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Automated Anti-Cheat & Freshness Verification
+                  </span>
+                  <span className="text-slate-400 text-[11px] block mt-0.5">
+                    Checks repository inception date and commit timestamps to ensure no pre-built codebase was committed prior to hackathon kick-off.
+                  </span>
+                </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/[0.08]">
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  disabled={isImporting}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/25 disabled:opacity-50"
+                  disabled={
+                    isImporting ||
+                    (importTab === 'bulk'
+                      ? parsedBulkTeams.filter((t) => t.isValid).length === 0
+                      : teamRows.filter((r) => r.repoUrl.trim()).length === 0)
+                  }
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isImporting ? (
                     <>
-                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                      Analyzing Repo...
+                      <Sparkles className="w-4 h-4 animate-spin" />
+                      Auditing & Importing Teams...
                     </>
                   ) : (
                     <>
-                      <Plus className="w-3.5 h-3.5" />
-                      Start Syncing
+                      <UploadCloud className="w-4 h-4" />
+                      Import & Audit{' '}
+                      {importTab === 'bulk'
+                        ? `${parsedBulkTeams.filter((t) => t.isValid).length} Teams`
+                        : `${teamRows.filter((r) => r.repoUrl.trim()).length} Teams`}
                     </>
                   )}
                 </button>
