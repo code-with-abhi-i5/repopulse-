@@ -1,0 +1,434 @@
+- generic [ref=f1e3]:
+  - banner [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - link "RepoPulse v2.4 PRO" [ref=f1e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f1e11]:
+            - generic [ref=f1e12]: RepoPulse
+            - generic [ref=f1e13]: v2.4 PRO
+        - navigation [ref=f1e14]:
+          - link "Fleet Cockpit" [ref=f1e15] [cursor=pointer]:
+            - /url: "#cockpit"
+          - link "Capabilities" [ref=f1e16] [cursor=pointer]:
+            - /url: "#capabilities"
+          - link "Repositories" [ref=f1e17] [cursor=pointer]:
+            - /url: "#fleet"
+          - link "Live Simulator" [ref=f1e18] [cursor=pointer]:
+            - /url: "#telemetry-test"
+          - link "FAQ" [ref=f1e19] [cursor=pointer]:
+            - /url: "#faq"
+      - generic [ref=f1e20]:
+        - generic [ref=f1e21]: TLS 1.3 Telemetry Connected
+        - link "GitHub ★ 1,248" [ref=f1e24] [cursor=pointer]:
+          - /url: https://github.com/Zectral/repopulse
+          - generic [ref=f1e27]: GitHub
+          - generic [ref=f1e28]: ★ 1,248
+        - button "Launch Mission Control" [ref=f1e29]
+  - generic [ref=f1e33]:
+    - generic [ref=f1e34]:
+      - generic [ref=f1e35] [cursor=pointer]:
+        - generic [ref=f1e37]: HackQubit 2026 Champion Edition
+        - generic [ref=f1e38]: •
+        - generic [ref=f1e39]: Explore Live Mission Control
+      - heading "Autonomous Mission Control for High-Velocity Engineering Teams." [level=1] [ref=f1e42]
+      - paragraph [ref=f1e43]: RepoPulse synthesizes repository commits, review latency SLAs, CI failure telemetry, and contributor streak dynamics into a unified executive cockpit.
+      - generic [ref=f1e44]:
+        - button "Launch Live Cockpit Instant Demo" [ref=f1e45]:
+          - generic [ref=f1e48]: Launch Live Cockpit
+          - generic [ref=f1e49]: Instant Demo
+        - link "Inspect Source Repository" [ref=f1e50] [cursor=pointer]:
+          - /url: https://github.com/Zectral/repopulse
+        - button "Simulate Webhook" [ref=f1e54]
+      - generic [ref=f1e62]:
+        - generic [ref=f1e63]:
+          - generic [ref=f1e64]: 6 Repos
+          - generic [ref=f1e65]: Fleet Monitored
+          - generic [ref=f1e66]: ● 100% Active
+        - generic [ref=f1e67]:
+          - generic [ref=f1e68]: 94.2 / 100
+          - generic [ref=f1e69]: Algorithmic Health Score
+          - generic [ref=f1e70]: ▲ +3.4% This Week
+        - generic [ref=f1e71]:
+          - generic [ref=f1e72]: 2.4h
+          - generic [ref=f1e73]: Avg PR Review Latency
+          - generic [ref=f1e74]: 38% Faster than SLA
+        - generic [ref=f1e75]:
+          - generic [ref=f1e76]: < 45ms
+          - generic [ref=f1e77]: Live Telemetry Ingestion
+          - generic [ref=f1e78]: Zero-Drop Backpressure
+    - generic [ref=f1e80]:
+      - generic [ref=f1e81]:
+        - generic [ref=f1e82]:
+          - generic [ref=f1e83]:
+            - generic [ref=f1e84] [cursor=pointer]
+            - generic [ref=f1e85] [cursor=pointer]
+            - generic [ref=f1e86] [cursor=pointer]
+          - generic [ref=f1e88]: repopulse.dev/mission-control/live-overview
+        - generic [ref=f1e91]:
+          - button "Fleet Overview" [ref=f1e92]
+          - button "Live Feed" [ref=f1e93]
+          - button "Top Velocity" [ref=f1e96]
+        - generic [ref=f1e97]: REAL-TIME TELEMETRY (24ms)
+      - generic [ref=f1e100]:
+        - generic [ref=f1e101]:
+          - generic [ref=f1e102]:
+            - generic [ref=f1e103]: Fleet Health Index
+            - generic [ref=f1e108]: 94/100
+            - generic [ref=f1e109]: All 6 Repos Above Baseline
+          - generic [ref=f1e110]:
+            - generic [ref=f1e111]: Mean PR Latency
+            - generic [ref=f1e116]: 2.4h
+            - generic [ref=f1e117]: 38% faster than 4h target
+          - generic [ref=f1e118]:
+            - generic [ref=f1e119]: Active Commits (7d)
+            - generic [ref=f1e123]: 1,284
+            - generic [ref=f1e124]: +14% sprint velocity
+          - generic [ref=f1e125]:
+            - generic [ref=f1e126]: CI Stability Rate
+            - generic [ref=f1e131]: 99.2%
+            - generic [ref=f1e132]: 42 runs • 0 critical flakes
+        - generic [ref=f1e133]:
+          - generic [ref=f1e134]:
+            - generic [ref=f1e135]:
+              - generic [ref=f1e136]: Live Webhook Telemetry Stream
+              - generic [ref=f1e139]: STREAMING
+            - generic [ref=f1e140]:
+              - generic [ref=f1e679]:
+                - generic [ref=f1e680]:
+                  - img "Abhi Ghosh" [ref=f1e681]
+                  - generic [ref=f1e682]:
+                    - generic [ref=f1e683]:
+                      - generic [ref=f1e684]: Abhi Ghosh
+                      - generic [ref=f1e685]: repopulse
+                    - paragraph [ref=f1e686]: "Pushed commit: chore(ci): update release telemetry pipeline"
+                - generic [ref=f1e687]: Just now
+              - generic [ref=f1e141]:
+                - generic [ref=f1e142]:
+                  - img "Abhi Ghosh" [ref=f1e143]
+                  - generic [ref=f1e144]:
+                    - generic [ref=f1e145]:
+                      - generic [ref=f1e146]: Abhi Ghosh
+                      - generic [ref=f1e147]: repopulse
+                    - paragraph [ref=f1e148]: "Merged PR #84: Algorithmic Health Engine"
+                - generic [ref=f1e149]: Just now
+              - generic [ref=f1e150]:
+                - generic [ref=f1e151]:
+                  - img "Priya Sharma" [ref=f1e152]
+                  - generic [ref=f1e153]:
+                    - generic [ref=f1e154]:
+                      - generic [ref=f1e155]: Priya Sharma
+                      - generic [ref=f1e156]: the-grocery-hub
+                    - paragraph [ref=f1e157]: Pushed 4 commits to feature/realtime-ws
+                - generic [ref=f1e158]: 14s ago
+              - generic [ref=f1e159]:
+                - generic [ref=f1e160]:
+                  - img "Rahul Kumar" [ref=f1e161]
+                  - generic [ref=f1e162]:
+                    - generic [ref=f1e163]:
+                      - generic [ref=f1e164]: Rahul Kumar
+                      - generic [ref=f1e165]: agentic-ai-platform
+                    - paragraph [ref=f1e166]: CI workflow build completed on main (99.8%)
+                - generic [ref=f1e167]: 48s ago
+            - generic [ref=f1e168]:
+              - generic [ref=f1e169]: "Simulate a test event:"
+              - generic [ref=f1e170]:
+                - button "+ Commit" [ref=f1e171]
+                - button "+ PR" [ref=f1e172]
+          - generic [ref=f1e173]:
+            - generic [ref=f1e174]:
+              - generic [ref=f1e175]: Monitored Fleet Health Matrix
+              - button "Launch All 6 Repos" [ref=f1e178]
+            - generic [ref=f1e181]:
+              - generic [ref=f1e182]:
+                - generic [ref=f1e183]:
+                  - generic [ref=f1e184]:
+                    - generic [ref=f1e185] [cursor=pointer]: the-grocery-hub
+                    - generic [ref=f1e187]: TypeScript
+                  - generic [ref=f1e188]:
+                    - generic [ref=f1e189]: ★ 1248
+                    - generic [ref=f1e190]: ⑂ 183
+                    - generic [ref=f1e191]: 12 open issues
+                - generic [ref=f1e192]: 92 / 100
+              - generic [ref=f1e194]:
+                - generic [ref=f1e195]:
+                  - generic [ref=f1e196]:
+                    - generic [ref=f1e197] [cursor=pointer]: agentic-ai-platform
+                    - generic [ref=f1e199]: Python
+                  - generic [ref=f1e200]:
+                    - generic [ref=f1e201]: ★ 2341
+                    - generic [ref=f1e202]: ⑂ 412
+                    - generic [ref=f1e203]: 8 open issues
+                - generic [ref=f1e204]: 88 / 100
+              - generic [ref=f1e206]:
+                - generic [ref=f1e207]:
+                  - generic [ref=f1e208]:
+                    - generic [ref=f1e209] [cursor=pointer]: canopi
+                    - generic [ref=f1e211]: Go
+                  - generic [ref=f1e212]:
+                    - generic [ref=f1e213]: ★ 876
+                    - generic [ref=f1e214]: ⑂ 124
+                    - generic [ref=f1e215]: 5 open issues
+                - generic [ref=f1e216]: 79 / 100
+              - generic [ref=f1e218]:
+                - generic [ref=f1e219]:
+                  - generic [ref=f1e220]:
+                    - generic [ref=f1e221] [cursor=pointer]: repopulse
+                    - generic [ref=f1e223]: TypeScript
+                  - generic [ref=f1e224]:
+                    - generic [ref=f1e225]: ★ 467
+                    - generic [ref=f1e226]: ⑂ 52
+                    - generic [ref=f1e227]: 4 open issues
+                - generic [ref=f1e228]: 95 / 100
+            - generic [ref=f1e230]:
+              - generic [ref=f1e231]:
+                - text: "Real-time webhook health updates:"
+                - strong [ref=f1e232]: Active
+              - generic [ref=f1e233]: TLS 1.3 Verified
+        - generic [ref=f1e234]:
+          - generic [ref=f1e235]: Fully interactive simulation with 6 mock repositories, alerts, and live charts.
+          - button "Open Interactive Mission Control" [ref=f1e240]
+  - generic [ref=f1e244]:
+    - generic [ref=f1e245]:
+      - generic [ref=f1e246]: Architecture & Engine
+      - heading "Six architectural pillars engineered for velocity." [level=2] [ref=f1e252]
+      - paragraph [ref=f1e253]: From algorithmic health triage to multi-channel incident alerting, RepoPulse empowers engineering leads with actionable clarity.
+    - generic [ref=f1e254]:
+      - generic [ref=f1e255]:
+        - generic [ref=f1e256]:
+          - generic [ref=f1e262]:
+            - heading "Algorithmic Pulse Health Engine (APHE)" [level=3] [ref=f1e263]
+            - paragraph [ref=f1e264]: Composite 0–100 index weighted across 6 vital engineering dimensions.
+          - generic [ref=f1e265]: "Score: 94 / 100"
+        - generic [ref=f1e266]:
+          - generic [ref=f1e268]:
+            - generic [ref=f1e269]: Commit Cadence
+            - generic [ref=f1e270]: 24 / 25
+          - generic [ref=f1e274]:
+            - generic [ref=f1e275]: PR Responsiveness SLA
+            - generic [ref=f1e276]: 19 / 20
+          - generic [ref=f1e280]:
+            - generic [ref=f1e281]: CI Stability & Reliability
+            - generic [ref=f1e282]: 19 / 20
+          - generic [ref=f1e286]:
+            - generic [ref=f1e287]: Bus Factor & Contributor Spread
+            - generic [ref=f1e288]: 14 / 15
+        - paragraph [ref=f1e291]: Eliminate subjective code reviews. RepoPulse monitors commit freshness, PR turnaround, issue stagnation, and dependency churn to provide a definitive score every engineering standup.
+      - generic [ref=f1e292]:
+        - generic [ref=f1e293]:
+          - heading "Sub-Second Webhook Telemetry" [level=3] [ref=f1e301]
+          - paragraph [ref=f1e302]: Instantaneous event bus captures pushes, pull requests, issue reactions, and pipeline dispatches in under 50ms.
+          - generic [ref=f1e303]:
+            - generic [ref=f1e304]:
+              - generic [ref=f1e305]: DISPATCH LATENCY
+              - generic [ref=f1e306]: 34ms
+            - generic [ref=f1e307]:
+              - generic [ref=f1e308]: SIGNATURE STATUS
+              - generic [ref=f1e309]: VERIFIED
+            - generic [ref=f1e310]:
+              - generic [ref=f1e311]: QUEUE BACKLOG
+              - generic [ref=f1e312]: 0 events
+        - button "Simulate Webhook Ingestion" [ref=f1e314]
+      - generic [ref=f1e321]:
+        - generic [ref=f1e322]:
+          - heading "PR Review Latency Tracker" [level=3] [ref=f1e328]
+          - paragraph [ref=f1e329]: Pinpoint code review friction. Identify stalled PRs before sprints miss deadlines and calculate accurate review turnaround SLAs.
+          - generic [ref=f1e330]:
+            - generic [ref=f1e331]:
+              - generic [ref=f1e332]: Under 2 Hours
+              - generic [ref=f1e333]: 64% of PRs
+            - generic [ref=f1e334]:
+              - generic [ref=f1e335]: 2 to 6 Hours
+              - generic [ref=f1e336]: 28% of PRs
+            - generic [ref=f1e337]:
+              - generic [ref=f1e338]: Stalled (> 24h)
+              - generic [ref=f1e339]: 8% of PRs
+        - link "Inspect PR Review Matrix" [ref=f1e341] [cursor=pointer]:
+          - /url: /pull-requests
+      - generic [ref=f1e345]:
+        - generic [ref=f1e346]:
+          - generic [ref=f1e352]:
+            - heading "Multi-Channel Alert Dispatcher" [level=3] [ref=f1e353]
+            - paragraph [ref=f1e354]: Real-time webhooks routing anomalies directly to Slack, Discord, Email, and PagerDuty.
+          - generic [ref=f1e355]:
+            - button "slack" [ref=f1e356]
+            - button "discord" [active] [ref=f1e357]
+            - button "email" [ref=f1e358]
+            - button "webhook" [ref=f1e359]
+        - generic [ref=f1e360]:
+          - generic [ref=f1e361]:
+            - generic [ref=f1e362]: SIMULATED OUTBOUND PAYLOAD • DISCORD
+            - generic [ref=f1e363]: STATUS 200 OK
+          - generic [ref=f1e688]:
+            - generic [ref=f1e689]: "RepoPulse Bot — #dev-telemetry"
+            - generic [ref=f1e690]:
+              - text: ✨
+              - strong [ref=f1e691]: "Milestone:"
+              - code [ref=f1e692]: Zectral/the-grocery-hub
+              - text: just surpassed
+              - strong [ref=f1e693]: 1,200 Stars
+              - text: "!"
+            - generic [ref=f1e694]: "Velocity: +18 stars in last 24h • Contributor streak: 12d"
+        - generic [ref=f1e371]:
+          - generic [ref=f1e372]: Supports conditional filters (e.g. Star spikes, CI breaks, Force pushes)
+          - link "Configure Alert Rules" [ref=f1e373] [cursor=pointer]:
+            - /url: /alerts
+  - generic [ref=f1e376]:
+    - generic [ref=f1e377]:
+      - generic [ref=f1e378]:
+        - generic [ref=f1e379]: Fleet Telemetry
+        - heading "Monitored Repositories at a Glance" [level=2] [ref=f1e386]
+        - paragraph [ref=f1e387]: Inspect health ratings, language footprints, and commit velocity across all 6 connected repositories.
+      - button "View All Repositories" [ref=f1e388]
+    - generic [ref=f1e392]:
+      - generic [ref=f1e393]:
+        - generic [ref=f1e394]:
+          - generic [ref=f1e395]:
+            - generic [ref=f1e396]:
+              - text: Zectral
+              - heading "the-grocery-hub" [level=3] [ref=f1e397]
+            - generic [ref=f1e398]: 92 / 100
+          - paragraph [ref=f1e399]: Modern grocery commerce platform with real-time inventory tracking
+        - generic [ref=f1e400]:
+          - generic [ref=f1e401]:
+            - generic [ref=f1e402]: TypeScript
+            - generic [ref=f1e405]:
+              - generic [ref=f1e406]: "1248"
+              - generic [ref=f1e409]: "183"
+          - button "Launch Repository Telemetry" [ref=f1e415]
+      - generic [ref=f1e421]:
+        - generic [ref=f1e422]:
+          - generic [ref=f1e423]:
+            - generic [ref=f1e424]:
+              - text: Zectral
+              - heading "agentic-ai-platform" [level=3] [ref=f1e425]
+            - generic [ref=f1e426]: 88 / 100
+          - paragraph [ref=f1e427]: Enterprise AI agent orchestration and deployment framework
+        - generic [ref=f1e428]:
+          - generic [ref=f1e429]:
+            - generic [ref=f1e430]: Python
+            - generic [ref=f1e433]:
+              - generic [ref=f1e434]: "2341"
+              - generic [ref=f1e437]: "412"
+          - button "Launch Repository Telemetry" [ref=f1e443]
+      - generic [ref=f1e449]:
+        - generic [ref=f1e450]:
+          - generic [ref=f1e451]:
+            - generic [ref=f1e452]:
+              - text: Zectral
+              - heading "canopi" [level=3] [ref=f1e453]
+            - generic [ref=f1e454]: 79 / 100
+          - paragraph [ref=f1e455]: Cloud-native application platform for modern infrastructure
+        - generic [ref=f1e456]:
+          - generic [ref=f1e457]:
+            - generic [ref=f1e458]: Go
+            - generic [ref=f1e461]:
+              - generic [ref=f1e462]: "876"
+              - generic [ref=f1e465]: "124"
+          - button "Launch Repository Telemetry" [ref=f1e471]
+      - generic [ref=f1e477]:
+        - generic [ref=f1e478]:
+          - generic [ref=f1e479]:
+            - generic [ref=f1e480]:
+              - text: Zectral
+              - heading "repopulse" [level=3] [ref=f1e481]
+            - generic [ref=f1e482]: 95 / 100
+          - paragraph [ref=f1e483]: GitHub repository intelligence and monitoring platform
+        - generic [ref=f1e484]:
+          - generic [ref=f1e485]:
+            - generic [ref=f1e486]: TypeScript
+            - generic [ref=f1e489]:
+              - generic [ref=f1e490]: "467"
+              - generic [ref=f1e493]: "52"
+          - button "Launch Repository Telemetry" [ref=f1e499]
+      - generic [ref=f1e505]:
+        - generic [ref=f1e506]:
+          - generic [ref=f1e507]:
+            - generic [ref=f1e508]:
+              - text: RVSCET
+              - heading "hackathon-platform" [level=3] [ref=f1e509]
+            - generic [ref=f1e510]: 71 / 100
+          - paragraph [ref=f1e511]: All-in-one hackathon management and judging platform
+        - generic [ref=f1e512]:
+          - generic [ref=f1e513]:
+            - generic [ref=f1e514]: JavaScript
+            - generic [ref=f1e517]:
+              - generic [ref=f1e518]: "234"
+              - generic [ref=f1e521]: "67"
+          - button "Launch Repository Telemetry" [ref=f1e527]
+      - generic [ref=f1e533]:
+        - generic [ref=f1e534]:
+          - generic [ref=f1e535]:
+            - generic [ref=f1e536]:
+              - text: open-source
+              - heading "community-dashboard" [level=3] [ref=f1e537]
+            - generic [ref=f1e538]: 64 / 100
+          - paragraph [ref=f1e539]: Open-source community analytics and engagement dashboard
+        - generic [ref=f1e540]:
+          - generic [ref=f1e541]:
+            - generic [ref=f1e542]: TypeScript
+            - generic [ref=f1e545]:
+              - generic [ref=f1e546]: "156"
+              - generic [ref=f1e549]: "34"
+          - button "Launch Repository Telemetry" [ref=f1e555]
+  - generic [ref=f1e563]:
+    - generic [ref=f1e564]:
+      - generic [ref=f1e565]: Developer Experience
+      - heading "Try the Live Webhook Simulation" [level=2] [ref=f1e569]
+      - paragraph [ref=f1e570]: RepoPulse connects seamlessly to GitHub Webhook events. Test sending simulated payloads right now and observe how the mission control cockpit instantly calculates new telemetry.
+      - generic [ref=f1e571]:
+        - button "Simulate Git Push (38ms)" [ref=f1e572]
+        - button "Simulate PR Open (SLA Tracker)" [ref=f1e580]
+        - button "Simulate CI Alert" [ref=f1e586]
+    - generic [ref=f1e591]:
+      - generic [ref=f1e592]:
+        - generic [ref=f1e593]: bash ~ curl-test
+        - button "Copy cURL" [ref=f1e598]
+      - generic [ref=f1e602]: "curl -X POST https://api.repopulse.dev/v1/telemetry \\ -H \"Authorization: Bearer rp_live_test_779\" \\ -d '{\"event\": \"push\", \"repository\": \"Zectral/repopulse\"}'"
+      - generic [ref=f1e603]:
+        - generic [ref=f1e604]: "Webhook payload signature: verified"
+        - generic [ref=f1e605]: "Response: 200 OK (38ms)"
+  - generic [ref=f1e606]:
+    - generic [ref=f1e607]:
+      - heading "Frequently Asked Questions" [level=2] [ref=f1e608]
+      - paragraph [ref=f1e609]: Everything you need to know about RepoPulse architecture, data collection, and HackQubit demo evaluation.
+    - generic [ref=f1e610]:
+      - button "How does RepoPulse calculate the Algorithmic Pulse Health Score (0–100)?" [ref=f1e612]
+      - button "Do I need GitHub write permissions to use RepoPulse?" [ref=f1e617]
+      - button "How does the Hackathon Demo Mode work?" [ref=f1e622]
+      - button "Can RepoPulse monitor private GitHub organizations?" [ref=f1e627]
+      - button "What alerting channels are supported?" [ref=f1e632]
+  - generic [ref=f1e638]:
+    - text: ⚡ LIVE MISSION CONTROL DEMO READY
+    - heading "Ready to experience RepoPulse in action?" [level=3] [ref=f1e639]
+    - paragraph [ref=f1e640]: Explore the full simulated hackathon fleet cockpit or connect your own repository credentials to unlock real-time engineering telemetry.
+    - generic [ref=f1e641]:
+      - button "Launch Cockpit Mission Control" [ref=f1e642]
+      - link "View on GitHub" [ref=f1e643] [cursor=pointer]:
+        - /url: https://github.com/Zectral/repopulse
+  - contentinfo [ref=f1e644]:
+    - generic [ref=f1e645]:
+      - generic [ref=f1e646]:
+        - generic [ref=f1e647]:
+          - generic [ref=f1e651]: RepoPulse
+          - generic [ref=f1e652]: — Built for HackQubit 2026
+        - generic [ref=f1e653]:
+          - button "Cockpit" [ref=f1e654]
+          - link "Repositories" [ref=f1e655] [cursor=pointer]:
+            - /url: /repositories
+          - link "Pull Requests" [ref=f1e656] [cursor=pointer]:
+            - /url: /pull-requests
+          - link "Analytics" [ref=f1e657] [cursor=pointer]:
+            - /url: /analytics
+          - link "Contributors" [ref=f1e658] [cursor=pointer]:
+            - /url: /contributors
+          - link "Alerts" [ref=f1e659] [cursor=pointer]:
+            - /url: /alerts
+          - link "Reports" [ref=f1e660] [cursor=pointer]:
+            - /url: /reports
+      - generic [ref=f1e661]:
+        - generic [ref=f1e662]: © 2026 RepoPulse. All rights reserved. HackQubit Autonomous Innovation Track.
+        - generic [ref=f1e663]:
+          - generic [ref=f1e664]: Telemetry Engine v2.4
+          - generic [ref=f1e665]: •
+          - generic [ref=f1e666]: All Systems Operational
