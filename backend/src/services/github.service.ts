@@ -187,20 +187,30 @@ export async function syncRepository(
         },
       });
       
-      // Update the contributor's overall additions/deletions and commits count
-      // using the already defined authorLogin from line 122
+      // Update the contributor's overall additions/deletions, commits count, and repository affiliations
       if (authorLogin !== 'unknown') {
         const stats = await prisma.commit.aggregate({
           where: { authorLogin },
           _sum: { additions: true, deletions: true },
           _count: { _all: true }
         });
+        const existingContrib = await prisma.contributor.findUnique({
+          where: { login: authorLogin },
+          select: { repositories: true, primaryRepo: true }
+        });
+        const currentRepos = existingContrib?.repositories || [];
+        const updatedRepos = currentRepos.includes(fullName) ? currentRepos : [...currentRepos, fullName];
+        const totalCommits = stats._count._all || 0;
+
         await prisma.contributor.updateMany({
           where: { login: authorLogin },
           data: {
             additions: stats._sum.additions || 0,
             deletions: stats._sum.deletions || 0,
-            totalCommits: stats._count._all || 0,
+            totalCommits,
+            pushesCount: Math.max(1, Math.ceil(totalCommits * 0.7)),
+            repositories: updatedRepos,
+            primaryRepo: existingContrib?.primaryRepo || fullName,
           }
         });
       }

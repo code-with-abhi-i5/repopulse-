@@ -294,14 +294,14 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
-                    <img src={c.avatarUrl} alt={c.name} className="w-8 h-8 rounded-full border border-white/10" />
+                    <img src={c.avatarUrl} alt={c.name || c.login} className="w-8 h-8 rounded-full border border-white/10" />
                     <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-950 border border-white/10 text-[9px] font-bold text-slate-300 flex items-center justify-center">
                       {i + 1}
                     </span>
                   </div>
                   <div>
-                    <div className="font-bold text-slate-200">{c.name}</div>
-                    <div className="text-[11px] text-slate-400">{c.commits} commits</div>
+                    <div className="font-bold text-slate-200">{c.name || c.login}</div>
+                    <div className="text-[11px] text-slate-400">{c.commits || c.totalCommits || 0} commits</div>
                   </div>
                 </div>
 

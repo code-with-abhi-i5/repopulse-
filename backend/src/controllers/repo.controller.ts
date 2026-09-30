@@ -52,16 +52,27 @@ export async function getRepositories(req: Request, res: Response) {
       prisma.repository.count({ where }),
       prisma.repository.findMany({
         where,
+        include: {
+          _count: {
+            select: {
+              commits: true,
+              pullRequests: true,
+              issues: true,
+            },
+          },
+        },
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
     ]);
 
-    // Format BigInt githubId for JSON serialization
-    const formatted = repositories.map((r) => ({
+    // Format BigInt githubId and attach counts for JSON serialization
+    const formatted = repositories.map((r: any) => ({
       ...r,
       githubId: Number(r.githubId),
+      commitsCount: r._count?.commits || 0,
+      commits: r._count?.commits || 0,
     }));
 
     return res.json({

@@ -44,13 +44,17 @@ export default function ContributorsPage() {
 
   // Total summary telemetry
   const summaryTelemetry = useMemo(() => {
-    const totalPushes = contributors.reduce(
-      (acc, c) => acc + (c.pushesCount || Math.floor(c.commits * 0.35)),
+    const totalCommits = contributors.reduce(
+      (acc, c) => acc + (c.commits || c.totalCommits || 0),
       0
     )
-    const totalAdditions = contributors.reduce((acc, c) => acc + c.additions, 0)
-    const totalDeletions = contributors.reduce((acc, c) => acc + c.deletions, 0)
-    return { totalPushes, totalAdditions, totalDeletions }
+    const totalPushes = contributors.reduce(
+      (acc, c) => acc + (c.pushesCount || Math.ceil((c.commits || 0) * 0.7)),
+      0
+    )
+    const totalAdditions = contributors.reduce((acc, c) => acc + (c.additions || 0), 0)
+    const totalDeletions = contributors.reduce((acc, c) => acc + (c.deletions || 0), 0)
+    return { totalCommits, totalPushes, totalAdditions, totalDeletions }
   }, [contributors])
 
   // Filter & sort
@@ -140,14 +144,14 @@ export default function ContributorsPage() {
       </div>
 
       {/* Top Telemetry KPI Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-2xl glass-card flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <Users className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
-              Total Developers
+              Developers
             </span>
             <span className="text-xl font-bold font-mono text-white">
               {contributors.length} Active
@@ -156,12 +160,26 @@ export default function ContributorsPage() {
         </div>
 
         <div className="p-4 rounded-2xl glass-card flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <GitCommit className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
-              Total Pushes Tracked
+              Total Commits
+            </span>
+            <span className="text-xl font-bold font-mono text-indigo-400">
+              {summaryTelemetry.totalCommits} Commits
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl glass-card flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
+              Pushes Tracked
             </span>
             <span className="text-xl font-bold font-mono text-blue-400">
               {summaryTelemetry.totalPushes} Pushes
@@ -175,7 +193,7 @@ export default function ContributorsPage() {
           </div>
           <div>
             <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
-              Total Lines Added
+              Lines Added
             </span>
             <span className="text-xl font-bold font-mono text-emerald-400">
               +{formatNumber(summaryTelemetry.totalAdditions)}
@@ -189,7 +207,7 @@ export default function ContributorsPage() {
           </div>
           <div>
             <span className="text-[11px] font-medium text-slate-400 block uppercase tracking-wider">
-              Total Lines Deleted
+              Lines Deleted
             </span>
             <span className="text-xl font-bold font-mono text-rose-400">
               -{formatNumber(summaryTelemetry.totalDeletions)}
@@ -222,7 +240,7 @@ export default function ContributorsPage() {
             },
           ][idx]
 
-          const pushes = c.pushesCount || Math.floor(c.commits * 0.35)
+          const pushes = c.pushesCount || Math.ceil((c.commits || 0) * 0.7)
 
           return (
             <div
@@ -243,12 +261,12 @@ export default function ContributorsPage() {
               <div className="flex items-center gap-3.5 mb-3">
                 <img
                   src={c.avatarUrl}
-                  alt={c.name}
+                  alt={c.name || c.login}
                   className="w-14 h-14 rounded-full border-2 border-white/20 group-hover:scale-105 transition-transform"
                 />
                 <div className="min-w-0">
                   <h3 className="font-bold text-white text-base group-hover:text-indigo-400 transition-colors truncate">
-                    {c.name}
+                    {c.name || c.login}
                   </h3>
                   <span className="text-xs text-slate-400 font-mono block truncate">@{c.login}</span>
 
@@ -356,7 +374,7 @@ export default function ContributorsPage() {
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredContributors.map((c, idx) => {
-          const pushes = c.pushesCount || Math.floor(c.commits * 0.35)
+          const pushes = c.pushesCount || Math.ceil((c.commits || 0) * 0.7)
 
           return (
             <div
@@ -368,14 +386,14 @@ export default function ContributorsPage() {
                 <div className="flex items-start justify-between gap-3 mb-2.5">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img src={c.avatarUrl} alt={c.name} className="w-10 h-10 rounded-full border border-white/10" />
+                      <img src={c.avatarUrl} alt={c.name || c.login} className="w-10 h-10 rounded-full border border-white/10" />
                       <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 border border-white/10 text-[10px] font-bold text-slate-300 flex items-center justify-center">
                         {idx + 1}
                       </span>
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-sm hover:text-indigo-400 transition-colors">
-                        {c.name}
+                        {c.name || c.login}
                       </h3>
                       <span className="text-xs text-slate-400 font-mono block">@{c.login}</span>
                     </div>
@@ -442,12 +460,12 @@ export default function ContributorsPage() {
               <div className="flex items-center gap-4">
                 <img
                   src={selectedContributor.avatarUrl}
-                  alt={selectedContributor.name}
+                  alt={selectedContributor.name || selectedContributor.login}
                   className="w-16 h-16 rounded-full border-2 border-indigo-500/40"
                 />
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    {selectedContributor.name}
+                    {selectedContributor.name || selectedContributor.login}
                     {selectedContributor.teamName && (
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                         {selectedContributor.teamName}

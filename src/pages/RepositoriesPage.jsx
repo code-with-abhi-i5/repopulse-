@@ -8,6 +8,7 @@ import {
   Plus,
   Star,
   GitFork,
+  GitCommit,
   Eye,
   AlertCircle,
   ExternalLink,
@@ -305,6 +306,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
       })
       .sort((a, b) => {
         if (sortBy === 'health') return (b.healthScore || 0) - (a.healthScore || 0)
+        if (sortBy === 'commits') return ((b.commitsCount || b.commits || 0) - (a.commitsCount || a.commits || 0))
         if (sortBy === 'stars') return b.stars - a.stars
         if (sortBy === 'forks') return b.forks - a.forks
         if (sortBy === 'updated') return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -445,6 +447,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
               className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               <option value="health">Health Score</option>
+              <option value="commits">Most Commits</option>
               <option value="stars">Most Stars</option>
               <option value="forks">Most Forks</option>
               <option value="updated">Recently Updated</option>
@@ -578,20 +581,28 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
 
                 <div>
                   {/* Key Stats Bar */}
-                  <div className="grid grid-cols-4 py-3 border-y border-white/[0.08] text-center gap-1 mb-4">
+                  <div className="grid grid-cols-5 py-3 border-y border-white/[0.08] text-center gap-1 mb-4">
+                    <div>
+                      <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-0.5">
+                        <GitCommit className="w-3 h-3 text-indigo-400" />
+                      </div>
+                      <span className="text-xs font-bold text-indigo-400 font-mono" title="Total Commits">
+                        {formatNumber(repo.commitsCount || repo.commits || 0)}
+                      </span>
+                    </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-0.5">
                         <Star className="w-3 h-3 text-amber-400" />
                       </div>
-                      <span className="text-xs font-bold text-white font-mono">
+                      <span className="text-xs font-bold text-white font-mono" title="Stars">
                         {formatNumber(repo.stars)}
                       </span>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-0.5">
-                        <GitFork className="w-3 h-3 text-indigo-400" />
+                        <GitFork className="w-3 h-3 text-violet-400" />
                       </div>
-                      <span className="text-xs font-bold text-white font-mono">
+                      <span className="text-xs font-bold text-white font-mono" title="Forks">
                         {formatNumber(repo.forks)}
                       </span>
                     </div>
@@ -599,7 +610,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                       <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-0.5">
                         <Eye className="w-3 h-3 text-purple-400" />
                       </div>
-                      <span className="text-xs font-bold text-white font-mono">
+                      <span className="text-xs font-bold text-white font-mono" title="Watchers">
                         {formatNumber(repo.watchers)}
                       </span>
                     </div>
@@ -607,7 +618,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                       <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-0.5">
                         <AlertCircle className="w-3 h-3 text-emerald-400" />
                       </div>
-                      <span className="text-xs font-bold text-white font-mono">
+                      <span className="text-xs font-bold text-white font-mono" title="Open Issues">
                         {repo.openIssues}
                       </span>
                     </div>
@@ -667,6 +678,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                 <th className="py-3.5 px-4">Repository</th>
                 <th className="py-3.5 px-4">Pulse Health</th>
                 <th className="py-3.5 px-4">Language</th>
+                <th className="py-3.5 px-4">Commits</th>
                 <th className="py-3.5 px-4">Stars</th>
                 <th className="py-3.5 px-4">Forks</th>
                 <th className="py-3.5 px-4">Issues</th>
@@ -732,6 +744,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                         {repo.language}
                       </div>
                     </td>
+                    <td className="py-3 px-4 text-xs font-mono font-bold text-indigo-400">{formatNumber(repo.commitsCount || repo.commits || 0)}</td>
                     <td className="py-3 px-4 text-xs font-mono font-medium text-slate-200">{formatNumber(repo.stars)}</td>
                     <td className="py-3 px-4 text-xs font-mono font-medium text-slate-200">{formatNumber(repo.forks)}</td>
                     <td className="py-3 px-4 text-xs font-mono font-medium text-slate-200">{repo.openIssues}</td>

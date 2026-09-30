@@ -25,6 +25,8 @@ export interface Repository {
   archived: boolean;
   topics: string[];
   healthScore: number;
+  commits?: number;
+  commitsCount?: number;
   teamName?: string;
   hackathonBatch?: string;
   antiCheatStatus?: 'VERIFIED_FRESH' | 'PRE_EXISTING_FLAG' | 'AUDIT_PENDING';
