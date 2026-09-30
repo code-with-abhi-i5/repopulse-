@@ -8,10 +8,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 async function safeFetch<T>(endpoint: string, options: RequestInit = {}, fallback: T): Promise<T> {
   try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+    const authHeaders: Record<string, string> = {};
+    if (token) {
+      authHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...(options.headers || {}),
       },
     });
@@ -162,14 +169,29 @@ export const api = {
   // Activities
   async getActivities(): Promise<ActivityEvent[]> {
     const data = await safeFetch<any[]>('/activities', { method: 'GET' }, []);
-    return data.map((evt: any) => ({
-      ...evt,
-      actor: {
-        login: evt.actorLogin,
-        name: evt.actorName || evt.actorLogin,
-        avatarUrl: evt.actorAvatarUrl,
-      },
-    })) as ActivityEvent[];
+    return data.map((evt: any) => {
+      let cleanTitle = evt.title || evt.description || 'Activity recorded';
+      if (cleanTitle.startsWith('New push to ')) {
+        const colonIdx = cleanTitle.indexOf(': ');
+        if (colonIdx !== -1) {
+          cleanTitle = cleanTitle.substring(colonIdx + 2);
+        }
+      }
+
+      const login = evt.actorLogin || 'contributor';
+      return {
+        ...evt,
+        type: (evt.type || 'push').toLowerCase() as any,
+        title: cleanTitle,
+        description: evt.description || cleanTitle,
+        commitCount: evt.commitCount || 1,
+        actor: {
+          login,
+          name: evt.actorName || login,
+          avatarUrl: evt.actorAvatarUrl || `https://github.com/${login}.png`,
+        },
+      };
+    }) as ActivityEvent[];
   },
 
   // Contributors
@@ -205,5 +227,52 @@ export const api = {
   // Alerts
   async getAlerts(): Promise<Alert[]> {
     return safeFetch<Alert[]>('/alerts', { method: 'GET' }, []);
+  },
+
+  // Authentication
+  async login(username: string, password: string): Promise<{ success: boolean; token: string; user: any; message?: string }> {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Login failed. Please check your credentials.');
+    }
+    return json;
+  },
+
+  async changePassword(username: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, currentPassword, newPassword }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Failed to update password.');
+    }
+    return json;
+  },
+
+  async resetPassword(username: string, recoveryKey: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, recoveryKey, newPassword }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Failed to reset password.');
+    }
+    return json;
+  },
+
+  async getMe(): Promise<any> {
+    return safeFetch<any>('/auth/me', { method: 'GET' }, null);
   },
 };

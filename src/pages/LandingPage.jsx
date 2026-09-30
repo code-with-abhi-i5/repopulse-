@@ -11,6 +11,7 @@ import {
   Activity,
   Shield,
   ShieldCheck,
+  Lock,
   Users,
   GitPullRequest,
   BarChart3,
@@ -303,12 +304,21 @@ export default function LandingPage() {
               </span>
             </a>
 
+            {/* Admin Sign In CTA */}
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-white/20 transition-all shadow-sm"
+            >
+              <Lock className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Admin Login</span>
+            </Link>
+
             {/* Next-Level Launch CTA */}
             <button
               onClick={handleLaunch}
               className="group flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-lg shadow-indigo-500/35 border border-indigo-400/30 transition-all hover:scale-105 active:scale-95 btn-glow"
             >
-              <span>Launch App</span>
+              <span>Cockpit</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </button>
 

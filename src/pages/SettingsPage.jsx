@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useUIStore, useDemoStore } from '../stores'
+import { useUIStore, useDemoStore, useAuthStore } from '../stores'
+import { api } from '../lib/api'
 import Github from '../components/icons/Github.jsx'
 import {
   Settings,
@@ -14,6 +15,10 @@ import {
   ExternalLink,
   Sliders,
   Sparkles,
+  Lock,
+  KeyRound,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -27,8 +32,40 @@ export default function SettingsPage() {
   const [slackWebhook, setSlackWebhook] = useState('')
   const [notificationEmail, setNotificationEmail] = useState('abhi@example.com')
   const [isSaved, setIsSaved] = useState(false)
-  const [isTestingWebhook, setIsTestingWebhook] = useState(false)
-  const [webhookStatus, setWebhookStatus] = useState(null)
+  const { user } = useAuthStore()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordStatus, setPasswordStatus] = useState(null)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault()
+    setPasswordStatus(null)
+
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus({ type: 'error', message: 'New passwords do not match.' })
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordStatus({ type: 'error', message: 'New password must be at least 6 characters long.' })
+      return
+    }
+
+    setIsUpdatingPassword(true)
+    try {
+      const res = await api.changePassword(user?.username || 'admin', currentPassword, newPassword)
+      setPasswordStatus({ type: 'success', message: res.message || 'Password successfully updated!' })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      setPasswordStatus({ type: 'error', message: err.message || 'Failed to update password.' })
+    } finally {
+      setIsUpdatingPassword(false)
+    }
+  }
 
   const handleSave = (e) => {
     e.preventDefault()
@@ -233,6 +270,84 @@ export default function SettingsPage() {
                 {t.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Section 6: Admin Security & Password Change */}
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div className="flex items-center gap-2.5">
+              <KeyRound className="w-5 h-5 text-indigo-400" />
+              <div>
+                <h3 className="text-base font-bold text-foreground">Admin Security & Password</h3>
+                <p className="text-xs text-muted-foreground">Change administrator account credentials</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+              USER: {user?.username || 'admin'}
+            </span>
+          </div>
+
+          {passwordStatus && (
+            <div
+              className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                passwordStatus.type === 'success'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              }`}
+            >
+              {passwordStatus.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{passwordStatus.message}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary text-foreground font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">New Password (Min 6 chars)</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New strong password"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary text-foreground font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Confirm New Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-secondary/50 border border-border focus:outline-none focus:ring-1 focus:ring-primary text-foreground font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleUpdatePassword}
+              disabled={isUpdatingPassword || !currentPassword || !newPassword}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-all shadow-sm shadow-indigo-600/25"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              {isUpdatingPassword ? 'Updating...' : 'Update Admin Password'}
+            </button>
           </div>
         </div>
 

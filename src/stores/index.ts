@@ -118,3 +118,54 @@ export const useRealtimeStore = create<RealtimeState>((set) => ({
     })),
   setLiveEvents: (events) => set({ liveEvents: events }),
 }));
+
+// --- Auth Store ---
+export interface AuthUser {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+interface AuthState {
+  isAuthenticated: boolean;
+  token: string | null;
+  user: AuthUser | null;
+  login: (token: string, user: AuthUser) => void;
+  logout: () => void;
+  updateUser: (user: Partial<AuthUser>) => void;
+}
+
+const savedToken = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_user') : null;
+let parsedUser: AuthUser | null = null;
+if (savedUserStr) {
+  try {
+    parsedUser = JSON.parse(savedUserStr);
+  } catch {}
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  isAuthenticated: !!savedToken,
+  token: savedToken,
+  user: parsedUser,
+  login: (token, user) => {
+    localStorage.setItem('repopulse_auth_token', token);
+    localStorage.setItem('repopulse_auth_user', JSON.stringify(user));
+    set({ isAuthenticated: true, token, user });
+  },
+  logout: () => {
+    localStorage.removeItem('repopulse_auth_token');
+    localStorage.removeItem('repopulse_auth_user');
+    set({ isAuthenticated: false, token: null, user: null });
+  },
+  updateUser: (userUpdates) =>
+    set((s) => {
+      const updated = s.user ? { ...s.user, ...userUpdates } : null;
+      if (updated) {
+        localStorage.setItem('repopulse_auth_user', JSON.stringify(updated));
+      }
+      return { user: updated };
+    }),
+}));

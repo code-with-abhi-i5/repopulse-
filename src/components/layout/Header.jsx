@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router-dom'
-import { useUIStore, useNotificationStore, useRealtimeStore, useDemoStore } from '../../stores'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useUIStore, useNotificationStore, useRealtimeStore, useDemoStore, useAuthStore } from '../../stores'
 import {
   Search,
   Bell,
@@ -7,6 +7,8 @@ import {
   ChevronRight,
   Radio,
   Sparkles,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react'
 
 function getBreadcrumbs(pathname) {
@@ -35,8 +37,15 @@ export default function Header() {
   const { setSidebarMobileOpen, setCommandPaletteOpen, setNotificationDrawerOpen } = useUIStore()
   const { unreadCount } = useNotificationStore()
   const { connectionStatus } = useRealtimeStore()
+  const { user, logout } = useAuthStore()
   const location = useLocation()
+  const navigate = useNavigate()
   const breadcrumbs = getBreadcrumbs(location.pathname)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/[0.08] bg-[#050914]/80 px-4 sm:px-6 backdrop-blur-xl">
@@ -98,13 +107,25 @@ export default function Header() {
           )}
         </button>
 
-        {/* User profile avatar */}
+        {/* User profile avatar & Logout */}
         <div className="flex items-center gap-2 pl-2 border-l border-white/[0.08]">
+          <div className="hidden md:flex flex-col text-right">
+            <span className="text-xs font-bold text-slate-200">{user?.name || user?.username || 'Admin'}</span>
+            <span className="text-[10px] font-mono text-indigo-400">ADMINISTRATOR</span>
+          </div>
           <img
             src="https://api.dicebear.com/9.x/avataaars/svg?seed=abhi"
             alt="User profile"
             className="w-8 h-8 rounded-full border border-indigo-500/30 bg-indigo-500/10"
           />
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out of Admin Console"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all ml-1"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

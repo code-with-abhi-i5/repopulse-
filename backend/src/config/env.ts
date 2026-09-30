@@ -16,4 +16,6 @@ export const ENV = {
   SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || '',
   DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL || '',
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@repopulse.io',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || '',
 };

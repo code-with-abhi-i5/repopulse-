@@ -40,7 +40,7 @@ import {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { liveEvents, addLiveEvent } = useRealtimeStore()
+  const { liveEvents, setLiveEvents, addLiveEvent } = useRealtimeStore()
   const { isDemoMode } = useDemoStore()
   const [repositories, setRepositories] = useState([])
   const [contributors, setContributors] = useState([])
@@ -50,11 +50,16 @@ export default function DashboardPage() {
   useEffect(() => {
     api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
     api.getContributors().then((data) => setContributors(data || [])).catch(() => setContributors([]))
-  }, [])
+    api.getActivities().then((data) => {
+      if (data && data.length > 0) {
+        setLiveEvents(data)
+      }
+    }).catch(() => {})
+  }, [setLiveEvents])
 
-  // Simulated live event injector
+  // Simulated live event injector (only active if demo mode is explicitly enabled AND no real events exist)
   useEffect(() => {
-    if (!isDemoMode || repositories.length === 0) return
+    if (!isDemoMode || repositories.length === 0 || liveEvents.length > 0) return
     const interval = setInterval(() => {
       const types = ['push', 'pull_request', 'issues', 'workflow_run', 'star']
       const type = types[Math.floor(Math.random() * types.length)]
@@ -82,7 +87,7 @@ export default function DashboardPage() {
     }, 9000)
 
     return () => clearInterval(interval)
-  }, [isDemoMode, repositories, addLiveEvent])
+  }, [isDemoMode, repositories, liveEvents.length, addLiveEvent])
 
   // Fleet totals
   const totalStars = repositories.reduce((sum, r) => sum + (r.stars || 0), 0)
@@ -190,30 +195,66 @@ export default function DashboardPage() {
           </div>
 
           <div className="divide-y divide-white/[0.06]">
-            {liveEvents.slice(0, 5).map((evt) => (
-              <div key={evt.id} className="py-3 flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={evt.actor.avatarUrl}
-                    alt={evt.actor.name}
-                    className="w-7 h-7 rounded-full border border-white/10 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-200 truncate">
-                      {evt.actor.name}{' '}
-                      <span className="font-normal text-slate-400">— {evt.title}</span>
-                    </p>
-                    <span className="text-[11px] font-mono text-indigo-400 truncate block">
-                      {evt.repositoryName}
+            {liveEvents.length === 0 ? (
+              <div className="py-6 text-center text-xs text-slate-400">
+                No telemetry recorded yet across the fleet.
+              </div>
+            ) : (
+              liveEvents.slice(0, 6).map((evt) => (
+                <div
+                  key={evt.id}
+                  className="py-3 flex items-center justify-between gap-3 text-xs hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={evt.actor?.avatarUrl || `https://github.com/${evt.actor?.login || 'ghost'}.png`}
+                      alt={evt.actor?.name || 'Developer'}
+                      className="w-8 h-8 rounded-full border border-white/10 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-slate-100 truncate">
+                          {evt.actor?.name || evt.actor?.login || 'Developer'}
+                        </span>
+                        {evt.teamName && (
+                          <span className="px-1.5 py-0.5 text-[10px] rounded font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            {evt.teamName}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono text-slate-400">
+                          in <span className="text-indigo-400 font-semibold">{evt.repositoryName}</span>
+                        </span>
+                        {evt.branch && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-white/10">
+                            {evt.branch}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-300 text-xs mt-0.5 truncate max-w-xl">
+                        {evt.description || evt.title}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 text-right">
+                    {(evt.linesAdded > 0 || evt.linesDeleted > 0) && (
+                      <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono">
+                        {evt.linesAdded > 0 && <span className="text-emerald-400">+{evt.linesAdded}</span>}
+                        {evt.linesDeleted > 0 && <span className="text-rose-400">-{evt.linesDeleted}</span>}
+                      </div>
+                    )}
+                    {evt.commitSha && (
+                      <span className="hidden md:inline-block px-1.5 py-0.5 rounded font-mono text-[10px] bg-slate-800/80 text-slate-300 border border-white/10">
+                        {evt.commitSha}
+                      </span>
+                    )}
+                    <span className="text-[11px] font-mono text-slate-500 whitespace-nowrap">
+                      {formatRelativeTime(evt.timestamp)}
                     </span>
                   </div>
                 </div>
-
-                <span className="text-[11px] font-mono text-slate-500 whitespace-nowrap shrink-0">
-                  {formatRelativeTime(evt.timestamp)}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

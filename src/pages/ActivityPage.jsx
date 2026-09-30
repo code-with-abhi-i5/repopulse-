@@ -82,7 +82,8 @@ export default function ActivityPage() {
     const activeTeams = new Set()
 
     events.forEach((e) => {
-      if (e.type === 'push') totalPushes += e.commitCount || 1
+      const type = (e.type || '').toLowerCase()
+      if (type === 'push') totalPushes += e.commitCount || 1
       if (e.linesAdded) totalAdditions += e.linesAdded
       if (e.linesDeleted) totalDeletions += e.linesDeleted
       if (e.teamName) activeTeams.add(e.teamName)
@@ -99,7 +100,8 @@ export default function ActivityPage() {
   // Filtered event list
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
-      const matchType = selectedType === 'all' || e.type === selectedType
+      const type = (e.type || '').toLowerCase()
+      const matchType = selectedType === 'all' || type === selectedType.toLowerCase()
       const matchRepo = selectedRepo === 'all' || e.repositoryName === selectedRepo
       const matchTeam = selectedTeam === 'all' || e.teamName === selectedTeam
       const matchSearch =
@@ -287,7 +289,8 @@ export default function ActivityPage() {
           </div>
         ) : (
           filteredEvents.map((evt, idx) => {
-            const config = eventTypeIcons[evt.type] || eventTypeIcons.push
+            const eventType = (evt.type || 'push').toLowerCase()
+            const config = eventTypeIcons[eventType] || eventTypeIcons.push
             const Icon = config.icon
 
             return (
@@ -305,8 +308,8 @@ export default function ActivityPage() {
 
                   {/* Actor Avatar */}
                   <img
-                    src={evt.actor.avatarUrl}
-                    alt={evt.actor.name}
+                    src={evt.actor?.avatarUrl || `https://github.com/${evt.actor?.login || 'ghost'}.png`}
+                    alt={evt.actor?.name || 'Developer'}
                     className="w-10 h-10 rounded-full border border-white/10 shrink-0 mt-0.5"
                   />
 
@@ -315,7 +318,7 @@ export default function ActivityPage() {
                     {/* Top Identity Meta: Developer + Team + Repo + Branch */}
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-xs font-bold text-white">
-                        {evt.actor.name}
+                        {evt.actor?.name || evt.actor?.login || 'Developer'}
                       </span>
 
                       {/* Team Badge */}

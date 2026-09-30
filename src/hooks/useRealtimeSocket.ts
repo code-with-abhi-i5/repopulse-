@@ -42,12 +42,15 @@ export function useRealtimeSocket() {
 
       // Listen for new live activities (pushes, PRs, workflow runs)
       socket.on('activity:new', (event: any) => {
+        const login = event.actorLogin || 'contributor';
         const mappedEvent = {
           ...event,
+          type: (event.type || 'push').toLowerCase(),
+          commitCount: event.commitCount || 1,
           actor: {
-            login: event.actorLogin,
-            name: event.actorName || event.actorLogin,
-            avatarUrl: event.actorAvatarUrl,
+            login,
+            name: event.actorName || login,
+            avatarUrl: event.actorAvatarUrl || `https://github.com/${login}.png`,
           },
         };
         addLiveEvent(mappedEvent as ActivityEvent);

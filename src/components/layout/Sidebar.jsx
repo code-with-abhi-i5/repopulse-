@@ -1,5 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { useUIStore, useDemoStore } from '../../stores'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useUIStore, useDemoStore, useAuthStore } from '../../stores'
 import {
   LayoutDashboard,
   FolderGit2,
@@ -16,6 +16,7 @@ import {
   Moon,
   Zap,
   Sparkles,
+  LogOut,
 } from 'lucide-react'
 
 const navItems = [
@@ -43,7 +44,14 @@ export default function Sidebar() {
     setTheme,
   } = useUIStore()
   const { isDemoMode } = useDemoStore()
+  const { logout } = useAuthStore()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   const isCollapsed = sidebarCollapsed
   const sidebarWidth = isCollapsed ? 'w-[72px]' : 'w-[250px]'
@@ -187,6 +195,16 @@ export default function Sidebar() {
             </button>
           )}
         </div>
+
+        {/* Log Out Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+          title={isCollapsed ? 'Log Out' : undefined}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Log Out Admin</span>}
+        </button>
       </div>
     </aside>
   )

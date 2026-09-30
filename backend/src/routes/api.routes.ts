@@ -20,6 +20,7 @@ import { getIssues } from '../controllers/issue.controller.js';
 import { getAlerts, markAlertAsRead, getAlertRules, createAlertRule } from '../controllers/alert.controller.js';
 import { handleGitHubWebhook } from '../controllers/webhook.controller.js';
 import { requireAdminKey } from '../middlewares/auth.middleware.js';
+import { login, changePassword, resetPassword, getMe } from '../controllers/auth.controller.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -27,6 +28,14 @@ const upload = multer({
 });
 
 export const apiRouter = Router();
+
+// -------------------------------------------------------------
+// Authentication Endpoints
+// -------------------------------------------------------------
+apiRouter.post('/auth/login', login);
+apiRouter.post('/auth/change-password', changePassword);
+apiRouter.post('/auth/reset-password', resetPassword);
+apiRouter.get('/auth/me', getMe);
 
 // -------------------------------------------------------------
 // Health Check

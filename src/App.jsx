@@ -68,6 +68,9 @@ function RealtimeManager() {
   return null;
 }
 
+import LoginPage from './pages/LoginPage.jsx'
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -76,7 +79,14 @@ export default function App() {
       <RealtimeManager />
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route element={<DashboardLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/repositories" element={<RepositoriesPage />} />
           <Route path="/repositories/:owner/:repo" element={<RepositoryDetailPage />} />
