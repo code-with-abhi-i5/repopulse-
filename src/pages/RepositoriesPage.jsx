@@ -188,14 +188,14 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
             }
             setImportNotification({
               title: 'Excel Ingested into Supabase',
-              message: `Successfully registered ${res.importedCount} participant repositories from ${selectedExcelFile.name}. Anti-cheat verification started.`,
+              message: `Successfully registered ${res.importedCount} participant repositories from ${selectedExcelFile.name}. Telemetry verification started.`,
             })
           }
         } catch (apiErr) {
           console.warn('Backend API upload fallback:', apiErr.message)
           setImportNotification({
             title: 'Excel File Registered',
-            message: `Processed ${selectedExcelFile.name} for ${hackathonBatch}. Telemetry and anti-cheat audit active.`,
+            message: `Processed ${selectedExcelFile.name} for ${hackathonBatch}. Telemetry and sync active.`,
           })
         }
 
@@ -253,7 +253,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
           name: t.name,
           fullName: t.fullName,
           owner: t.owner,
-          description: `Hackathon participant project registered for ${t.teamName}. Synced with Anti-Cheat & Telemetry engine.`,
+          description: `Hackathon participant project registered for ${t.teamName}. Synced with live telemetry engine.`,
           visibility: 'public',
           defaultBranch: 'main',
           license: 'MIT',
@@ -267,10 +267,9 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
           openIssues: Math.floor(Math.random() * 4),
           sizeKb: Math.floor(Math.random() * 7000) + 2500,
           archived: false,
-          topics: ['hackathon-2026', 'live-telemetry', 'verified-fresh'],
+          topics: ['hackathon-2026', 'live-telemetry'],
           healthScore: randomScore,
           teamName: t.teamName,
-          antiCheatStatus: 'VERIFIED_FRESH',
         }
       })
 
@@ -280,7 +279,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
       setBulkText('')
       setImportNotification({
         title: 'Hackathon Teams Registered',
-        message: `Successfully connected ${newRepos.length} participant teams with live telemetry & anti-cheat audit.`,
+        message: `Successfully connected ${newRepos.length} participant teams with live telemetry.`,
       })
       setTimeout(() => setImportNotification(null), 5000)
     } catch (e) {
@@ -314,6 +313,56 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
         return 0
       })
   }, [repositories, searchQuery, selectedLanguage, sortBy])
+
+  // Group repositories by team for Multi-Repo Team Management
+  const teamGroups = useMemo(() => {
+    const map = new Map()
+
+    filteredRepos.forEach((repo) => {
+      const rawName = repo.teamName?.trim()
+      const teamKey = rawName && rawName.toLowerCase() !== 'independent' ? rawName : 'Independent Projects'
+      const isIndependent = !rawName || rawName.toLowerCase() === 'independent'
+
+      if (!map.has(teamKey)) {
+        map.set(teamKey, {
+          teamName: teamKey,
+          isIndependent,
+          hackathonBatch: repo.hackathonBatch,
+          repos: [],
+        })
+      }
+      map.get(teamKey).repos.push(repo)
+    })
+
+    return Array.from(map.values())
+      .map((group) => {
+        const totalCommits = group.repos.reduce(
+          (sum, r) => sum + (r.commitsCount || r.commits || 0),
+          0
+        )
+        const totalStars = group.repos.reduce((sum, r) => sum + (r.stars || 0), 0)
+        const totalForks = group.repos.reduce((sum, r) => sum + (r.forks || 0), 0)
+        const totalIssues = group.repos.reduce((sum, r) => sum + (r.openIssues || 0), 0)
+        const avgHealth = Math.round(
+          group.repos.reduce((sum, r) => sum + (r.healthScore || 80), 0) / (group.repos.length || 1)
+        )
+
+        return {
+          ...group,
+          totalCommits,
+          totalStars,
+          totalForks,
+          totalIssues,
+          avgHealth,
+        }
+      })
+      .sort((a, b) => {
+        if (a.isIndependent && !b.isIndependent) return 1
+        if (!a.isIndependent && b.isIndependent) return -1
+        if (b.repos.length !== a.repos.length) return b.repos.length - a.repos.length
+        return b.avgHealth - a.avgHealth
+      })
+  }, [filteredRepos])
 
   // Toggle repository comparison
   const toggleCompare = (repoId) => {
@@ -373,7 +422,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Automated code evaluator, commit burst detector, and anti-cheat tracking for all hackathon team repositories.
+            Automated code evaluator, commit burst detector, and live telemetry tracking for all hackathon team repositories.
           </p>
         </div>
 
@@ -475,6 +524,16 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
             >
               <List className="w-4 h-4" />
             </button>
+            <button
+              onClick={() => setViewMode('teams')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                viewMode === 'teams' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+              }`}
+              title="Group by Team (Multi-Repo View)"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">By Team</span>
+            </button>
           </div>
         </div>
       </div>
@@ -498,6 +557,152 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
             <UploadCloud className="w-4 h-4" />
             Bulk Import Teams & Repos
           </button>
+        </div>
+      ) : viewMode === 'teams' ? (
+        /* Multi-Repo Team Grouped View */
+        <div className="space-y-6">
+          {teamGroups.map((group) => {
+            const hasMultipleRepos = group.repos.length > 1
+            const avgHealthColor =
+              group.avgHealth >= 90
+                ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                : group.avgHealth >= 75
+                ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+                : 'text-amber-400 border-amber-500/30 bg-amber-500/10'
+
+            return (
+              <div
+                key={group.teamName}
+                className="rounded-2xl glass-card border border-white/[0.08] p-5 sm:p-6 transition-all hover:border-white/15"
+              >
+                {/* Team Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-sm">
+                      {group.isIndependent ? <FolderGit2 className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-base font-bold text-white tracking-tight">
+                          {group.teamName}
+                        </h3>
+                        {hasMultipleRepos ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30">
+                            Multi-Repo Team ({group.repos.length} Repos)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-white/10">
+                            {group.repos.length} Repository
+                          </span>
+                        )}
+                        {group.hackathonBatch && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.05] text-slate-400">
+                            {group.hackathonBatch}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {hasMultipleRepos
+                          ? `Managing ${group.repos.length} coordinated repositories for this team.`
+                          : `Single repository project.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Team Aggregated Badges */}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-mono border ${avgHealthColor}`}>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{group.avgHealth}/100 Avg Health</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-slate-900 border border-white/10 text-slate-200">
+                      <GitCommit className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>{group.totalCommits} Commits</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-slate-900 border border-white/10 text-amber-300">
+                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
+                      <span>{group.totalStars}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Repositories Subgrid */}
+                <div className={`mt-4 grid gap-3.5 ${hasMultipleRepos ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                  {group.repos.map((repo) => {
+                    const health = repo.healthScore || 80
+                    const hColor =
+                      health >= 90
+                        ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10'
+                        : health >= 75
+                        ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
+                        : 'text-amber-400 border-amber-500/20 bg-amber-500/10'
+
+                    return (
+                      <div
+                        key={repo.id}
+                        className="p-4 rounded-xl bg-slate-950/50 border border-white/[0.06] hover:border-indigo-500/40 transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div>
+                              <span className="text-[11px] text-slate-500 font-mono block">
+                                {repo.owner}
+                              </span>
+                              <Link
+                                to={`/repositories/${repo.owner}/${repo.name}`}
+                                className="text-sm font-bold text-white hover:text-indigo-400 transition-colors"
+                              >
+                                {repo.name}
+                              </Link>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold border ${hColor}`}>
+                              {health}/100
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-3">
+                            {repo.description || 'No description provided.'}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2.5 border-t border-white/[0.04] text-xs text-slate-400">
+                          <div className="flex items-center gap-3">
+                            {repo.language && (
+                              <span className="flex items-center gap-1.5 text-[11px]">
+                                <span
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: languageColors[repo.language] || '#a855f7' }}
+                                />
+                                {repo.language}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-[11px] font-mono">
+                              <GitCommit className="w-3 h-3 text-slate-500" />
+                              {repo.commitsCount || repo.commits || 0}
+                            </span>
+                            <span className="flex items-center gap-1 text-[11px] font-mono">
+                              <Star className="w-3 h-3 text-slate-500" />
+                              {repo.stars || 0}
+                            </span>
+                          </div>
+
+                          <Link
+                            to={`/repositories/${repo.owner}/${repo.name}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+                          >
+                            <span>Inspect</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -527,12 +732,6 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                             <Users className="w-3 h-3 text-indigo-400" />
                             {repo.teamName}
                           </span>
-                          {repo.antiCheatStatus === 'VERIFIED_FRESH' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Verified repo created during hackathon period">
-                              <ShieldCheck className="w-2.5 h-2.5" />
-                              Fresh Repo
-                            </span>
-                          )}
                         </div>
                       )}
                       <span className="text-xs text-slate-500 font-mono block truncate">
@@ -694,17 +893,10 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                   <tr key={repo.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="py-3 px-4">
                       {repo.teamName ? (
-                        <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
-                            <Users className="w-3 h-3 text-indigo-400" />
-                            {repo.teamName}
-                          </span>
-                          {repo.antiCheatStatus === 'VERIFIED_FRESH' && (
-                            <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
-                              <ShieldCheck className="w-3 h-3" /> Fresh
-                            </div>
-                          )}
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
+                          <Users className="w-3 h-3 text-indigo-400" />
+                          {repo.teamName}
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-500 italic">Unassigned</span>
                       )}
@@ -870,7 +1062,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Paste multiple repositories with team names from spreadsheets or forms to monitor telemetry and anti-cheat live.
+                    Paste multiple repositories with team names from spreadsheets or forms to monitor telemetry and team performance live.
                   </p>
                 </div>
               </div>
@@ -972,7 +1164,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
 
                     <div>
                       <label className="text-[11px] font-semibold text-slate-400 block mb-1">
-                        Hackathon Kick-off Time (Anti-Cheat):
+                        Hackathon Kick-off Time:
                       </label>
                       <input
                         type="datetime-local"
@@ -1110,24 +1302,17 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                 </div>
               )}
 
-              {/* Anti-Cheat Automated Audit Setting */}
-              <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="antiCheatCheckbox"
-                  checked={antiCheatAuditEnabled}
-                  onChange={(e) => setAntiCheatAuditEnabled(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-white/20 bg-slate-900"
-                />
-                <label htmlFor="antiCheatCheckbox" className="text-xs cursor-pointer select-none">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    Automated Anti-Cheat & Freshness Verification
+              {/* Multi-Repo Support Tip */}
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-start gap-3">
+                <Users className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold text-white block">
+                    Multi-Repo Team Support
                   </span>
                   <span className="text-slate-400 text-[11px] block mt-0.5">
-                    Checks repository inception date and commit timestamps to ensure no pre-built codebase was committed prior to hackathon kick-off.
+                    If a team has multiple repositories (e.g. Frontend and Backend), assign the same Team Name to both links. RepoPulse will automatically link and group them together.
                   </span>
-                </label>
+                </div>
               </div>
 
               {/* Modal Actions */}

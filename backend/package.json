@@ -12,7 +12,10 @@
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "set-admin": "tsx src/scripts/set_admin.ts"
+    "set-admin": "tsx src/scripts/set_admin.ts",
+    "test:cache": "tsx src/scripts/verify_redis_cache.ts",
+    "test:tokens": "tsx src/scripts/test_token_pool.ts",
+    "test:upstash": "tsx src/scripts/test_upstash.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -21,6 +24,7 @@
     "@octokit/graphql": "^8.2.1",
     "@octokit/rest": "^21.1.1",
     "@prisma/client": "^6.4.1",
+    "@upstash/redis": "^1.39.0",
     "axios": "^1.8.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

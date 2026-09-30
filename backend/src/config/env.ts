@@ -10,6 +10,8 @@ export const ENV = {
   DATABASE_URL: process.env.DATABASE_URL || '',
   DIRECT_URL: process.env.DIRECT_URL || '',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || '',
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || '',
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || 'hackqubit-admin-secret-2026',
   GITHUB_TOKEN_POOL: process.env.GITHUB_TOKEN_POOL || '',
   GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET || 'repopulse_webhook_secret_key',

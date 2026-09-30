@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { parseExcelBuffer } from '../services/excel.service.js';
 import { prisma } from '../lib/prisma.js';
 import { appQueue } from '../lib/queue.js';
+import { cacheService } from '../services/cache/cache.service.js';
 
 export async function uploadExcelHandler(req: Request, res: Response) {
   try {
@@ -84,6 +85,9 @@ export async function uploadExcelHandler(req: Request, res: Response) {
         status: 'QUEUED',
       });
     }
+
+    // Invalidate repositories cache upon new Excel bulk ingestion
+    await cacheService.invalidateAllRepositories().catch(() => {});
 
     return res.status(201).json({
       success: true,
@@ -167,6 +171,9 @@ export async function bulkAddHandler(req: Request, res: Response) {
 
       imported.push({ fullName, teamName, status: 'QUEUED' });
     }
+
+    // Invalidate repositories cache upon new bulk repositories add
+    await cacheService.invalidateAllRepositories().catch(() => {});
 
     return res.status(201).json({
       success: true,

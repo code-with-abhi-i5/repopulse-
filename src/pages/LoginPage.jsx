@@ -31,8 +31,8 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('signin')
 
   // Form states
-  const [username, setUsername] = useState('admin')
-  const [password, setPassword] = useState('admin123')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   // Change Password states
@@ -142,12 +142,6 @@ export default function LoginPage() {
     }
   }
 
-  const fillDefaultCredentials = () => {
-    setUsername('admin')
-    setPassword('admin123')
-    setErrorMessage('')
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center relative overflow-hidden px-4 py-12 selection:bg-indigo-500 selection:text-white">
       {/* Background Cyberpunk Ambient Glows */}
@@ -173,7 +167,7 @@ export default function LoginPage() {
                 ADMIN CONSOLE
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-mono">Fleet Intelligence & Anti-Cheat Engine</p>
+            <p className="text-xs text-slate-400 font-mono">Fleet Intelligence & Telemetry Engine</p>
           </div>
         </Link>
       </div>
@@ -298,21 +292,6 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
-
-            {/* Quick Default Credential Helper */}
-            <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-slate-300 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-mono text-indigo-400 font-bold block">DEFAULT CREDENTIALS:</span>
-                <span className="font-mono text-slate-300">admin / admin123</span>
-              </div>
-              <button
-                type="button"
-                onClick={fillDefaultCredentials}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 border border-indigo-500/30 transition-all"
-              >
-                Auto-fill
-              </button>
             </div>
 
             <button

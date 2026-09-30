@@ -21,6 +21,9 @@ import { getAlerts, markAlertAsRead, getAlertRules, createAlertRule } from '../c
 import { handleGitHubWebhook } from '../controllers/webhook.controller.js';
 import { requireAdminKey } from '../middlewares/auth.middleware.js';
 import { login, changePassword, resetPassword, getMe } from '../controllers/auth.controller.js';
+import { getAnalytics } from '../controllers/analytics.controller.js';
+import { getReports, generateReport } from '../controllers/report.controller.js';
+import { getTeams } from '../controllers/team.controller.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -37,15 +40,28 @@ apiRouter.post('/auth/change-password', changePassword);
 apiRouter.post('/auth/reset-password', resetPassword);
 apiRouter.get('/auth/me', getMe);
 
+import { checkRedisHealth } from '../services/cache/cache.service.js';
+
 // -------------------------------------------------------------
-// Health Check
+// Health Check & Infrastructure Observability
 // -------------------------------------------------------------
-apiRouter.get('/health', (req, res) => {
+apiRouter.get('/health', async (req, res) => {
+  const redisHealth = await checkRedisHealth();
   res.json({
     status: 'online',
     platform: 'RepoPulse API',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
+    redis: {
+      provider: redisHealth.provider,
+      status: redisHealth.status,
+      latencyMs: redisHealth.latencyMs,
+      hitRate: redisHealth.metrics.hitRate,
+      hits: redisHealth.metrics.hits,
+      misses: redisHealth.metrics.misses,
+      sets: redisHealth.metrics.sets,
+      deletes: redisHealth.metrics.deletes,
+    },
   });
 });
 
@@ -62,6 +78,11 @@ apiRouter.post('/repositories/sync', syncSingleRepoEndpoint);
 apiRouter.post('/repositories/upload-excel', requireAdminKey, upload.single('file'), uploadExcelHandler);
 apiRouter.post('/repositories/bulk-add', requireAdminKey, bulkAddHandler);
 apiRouter.delete('/repositories/:id', requireAdminKey, deleteRepository);
+
+// -------------------------------------------------------------
+// Teams & Multi-Repository Aggregations
+// -------------------------------------------------------------
+apiRouter.get('/teams', getTeams);
 
 // -------------------------------------------------------------
 // Activities & Streams
@@ -92,3 +113,10 @@ apiRouter.post('/alerts/rules', createAlertRule);
 // GitHub Webhook Ingest
 // -------------------------------------------------------------
 apiRouter.post('/webhooks/github', handleGitHubWebhook);
+
+// -------------------------------------------------------------
+// Real Analytics & Executive Reports
+// -------------------------------------------------------------
+apiRouter.get('/analytics', getAnalytics);
+apiRouter.get('/reports', getReports);
+apiRouter.post('/reports/generate', generateReport);

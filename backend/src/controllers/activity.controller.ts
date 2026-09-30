@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { cacheService, cacheKeys, CACHE_TTL } from '../services/cache/cache.service.js';
 
 export async function getActivities(req: Request, res: Response) {
   try {
@@ -11,15 +12,23 @@ export async function getActivities(req: Request, res: Response) {
     const repositoryId = req.query.repositoryId as string;
     const type = req.query.type as any;
 
-    const where: any = {};
-    if (repositoryId) where.repositoryId = repositoryId;
-    if (type) where.type = type;
+    const cacheKey = cacheKeys.activitiesList({ limit, repositoryId, type });
 
-    const activities = await prisma.activityEvent.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-    });
+    const activities = await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const where: any = {};
+        if (repositoryId) where.repositoryId = repositoryId;
+        if (type) where.type = type;
+
+        return prisma.activityEvent.findMany({
+          where,
+          orderBy: { timestamp: 'desc' },
+          take: limit,
+        });
+      },
+      CACHE_TTL.ACTIVITIES_LIST
+    );
 
     return res.json({ data: activities });
   } catch (err: any) {

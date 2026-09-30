@@ -275,4 +275,32 @@ export const api = {
   async getMe(): Promise<any> {
     return safeFetch<any>('/auth/me', { method: 'GET' }, null);
   },
+
+  // Analytics & Real Engineering Velocity
+  async getAnalytics(days: number = 30): Promise<any> {
+    return safeFetch<any>(`/analytics?days=${days}`, { method: 'GET' }, null);
+  },
+
+  // Executive Reports
+  async getReports(): Promise<any[]> {
+    const res = await safeFetch<any>('/reports', { method: 'GET' }, { data: [] });
+    return res.data || (Array.isArray(res) ? res : []);
+  },
+
+  async generateReport(title?: string): Promise<any> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+    const res = await fetch(`${API_BASE}/reports/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify({ title: title || 'Executive Fleet Intelligence Audit' }),
+    });
+
+    const json = await res.json();
+    return json.data || json;
+  },
 };

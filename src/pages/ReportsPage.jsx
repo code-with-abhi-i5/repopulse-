@@ -22,34 +22,45 @@ export default function ReportsPage() {
   const [reports, setReports] = useState([])
   const [selectedReport, setSelectedReport] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [repoCount, setRepoCount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.getRepositories().then((data) => setRepoCount((data || []).length)).catch(() => setRepoCount(0))
+    let mounted = true
+    setLoading(true)
+
+    api.getReports()
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setReports(data)
+          setSelectedReport(data[0])
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load real reports:', err)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
-  // Generate new report
-  const handleGenerateReport = () => {
+  // Generate new real live report from current DB state
+  const handleGenerateReport = async () => {
     setIsGenerating(true)
-    setTimeout(() => {
-      const now = new Date()
-      const newRep = {
-        id: `report-${Date.now()}`,
-        title: 'Ad-Hoc Fleet Intelligence Audit',
-        period: `Current Snapshot (${formatDate(now.toISOString())})`,
-        generatedAt: now.toISOString(),
-        health: 89,
-        healthChange: 5,
-        commits: 348,
-        prsMerged: 48,
-        issuesClosed: 42,
-        topContributor: 'Abhi Ghosh',
-        repositories: repoCount,
+    try {
+      const newRep = await api.generateReport('Fleet Intelligence & Security Audit')
+      if (newRep) {
+        setReports((prev) => [newRep, ...prev])
+        setSelectedReport(newRep)
       }
-      setReports([newRep, ...reports])
-      setSelectedReport(newRep)
+    } catch (err) {
+      console.error('Failed to generate live audit report:', err)
+    } finally {
       setIsGenerating(false)
-    }, 1200)
+    }
   }
 
   const handlePrint = () => {
@@ -210,22 +221,58 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {/* Key Highlights Section */}
-              <div className="space-y-3 pt-2">
+              {/* Key Highlights & Real Repository Breakdown */}
+              <div className="space-y-4 pt-2">
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  Strategic Engineering Takeaways
+                  Executive Intelligence & Performance Findings
                 </h4>
-                <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
-                  <p className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                    <strong className="text-foreground">Code Velocity:</strong> High commit cadence observed on Monday and Wednesday. Core repositories showed a 22% reduction in build turnaround latency.
+                <div className="p-4 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-foreground font-medium mb-1">
+                    {selectedReport.summary || `Intelligence synthesized across ${selectedReport.repositories} active repositories.`}
                   </p>
-                  <p className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                    <strong className="text-foreground">PR Review Turnaround:</strong> Average review latency reduced to under 3.5 hours, surpassing internal engineering SLA targets.
-                  </p>
-                  <p className="p-3 rounded-lg bg-muted/40 border border-border/60">
-                    <strong className="text-foreground">Bus Factor Alert:</strong> Recommended onboarding secondary reviewers for `canopi` and `community-dashboard` to mitigate single-contributor dependencies.
-                  </p>
+                  <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border/40 text-[11px]">
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 font-mono">
+                      Teams: {selectedReport.teamsCount || 1}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-mono">
+                      Stars: {selectedReport.totalStars || 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-mono">
+                      Health Avg: {Math.round(selectedReport.health || 85)}/100
+                    </span>
+                  </div>
                 </div>
+
+                {/* Real Monitored Repositories Table */}
+                {selectedReport.topRepositories && selectedReport.topRepositories.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Monitored Fleet Breakdown</span>
+                    <div className="rounded-xl border border-border overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-secondary/50 text-muted-foreground border-b border-border text-[11px]">
+                          <tr>
+                            <th className="py-2.5 px-3 font-semibold">Repository</th>
+                            <th className="py-2.5 px-3 font-semibold">Commits</th>
+                            <th className="py-2.5 px-3 font-semibold">Health Score</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50 text-foreground">
+                          {selectedReport.topRepositories.map((r, i) => (
+                            <tr key={i} className="hover:bg-secondary/20 transition-colors">
+                              <td className="py-2.5 px-3 font-mono font-medium text-primary">{r.name}</td>
+                              <td className="py-2.5 px-3 font-mono">{r.commits}</td>
+                              <td className="py-2.5 px-3">
+                                <span className={`font-mono font-bold ${r.health >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {r.health}/100
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

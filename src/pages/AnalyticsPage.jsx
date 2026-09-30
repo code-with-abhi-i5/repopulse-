@@ -1,7 +1,5 @@
-import { useState, useMemo } from 'react'
-import {
-  generateTimeSeriesData,
-} from '../data/mock'
+import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatNumber } from '../lib/utils'
 import {
   BarChart3,
@@ -11,6 +9,8 @@ import {
   Activity,
   Code2,
   Calendar,
+  Layers,
+  Sparkles,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -28,18 +28,41 @@ import {
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30') // '7' | '30' | '90'
+  const [loading, setLoading] = useState(true)
+  const [analytics, setAnalytics] = useState(null)
 
-  const timeSeriesData = useMemo(() => {
-    return generateTimeSeriesData(parseInt(timeRange, 10))
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+
+    api.getAnalytics(parseInt(timeRange, 10))
+      .then((data) => {
+        if (mounted && data) {
+          setAnalytics(data)
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch live analytics:', err)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
   }, [timeRange])
 
-  // Total additions & deletions in window
-  const totals = useMemo(() => {
-    const totalAdditions = timeSeriesData.reduce((acc, d) => acc + d.additions, 0)
-    const totalDeletions = timeSeriesData.reduce((acc, d) => acc + d.deletions, 0)
-    const totalCommits = timeSeriesData.reduce((acc, d) => acc + d.commits, 0)
-    return { totalAdditions, totalDeletions, totalCommits }
-  }, [timeSeriesData])
+  const totals = analytics?.totals || {
+    totalCommits: 0,
+    totalAdditions: 0,
+    totalDeletions: 0,
+    fleetHealth: 70,
+    totalStars: 0,
+    totalRepositories: 0,
+  }
+
+  const timeSeriesData = analytics?.timeSeriesData || []
 
   return (
     <div className="space-y-6">
@@ -87,7 +110,7 @@ export default function AnalyticsPage() {
             <GitCommit className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-white font-mono">{formatNumber(totals.totalCommits)}</div>
-          <span className="text-[11px] text-emerald-400 font-medium">+14% vs previous window</span>
+          <span className="text-[11px] text-emerald-400 font-medium">Across {totals.totalRepositories || 0} active repos</span>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl glass-card">
@@ -113,8 +136,10 @@ export default function AnalyticsPage() {
             <span>Fleet Health</span>
             <ShieldCheck className="w-4 h-4 text-cyan-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white font-mono">94.2</div>
-          <span className="text-[11px] text-emerald-400 font-medium">Optimal stability</span>
+          <div className="text-2xl sm:text-3xl font-black text-white font-mono">{totals.fleetHealth || 70}%</div>
+          <span className={`text-[11px] font-medium ${(totals.fleetHealth || 70) >= 70 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {(totals.fleetHealth || 70) >= 70 ? 'Optimal stability' : 'Attention required'}
+          </span>
         </div>
       </div>
 

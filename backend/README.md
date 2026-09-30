@@ -46,8 +46,9 @@ The server will be live at:
 * [src/services/excel.service.ts](file:///c:/Users/ghosh/OneDrive/Desktop/github%20hackqubit/backend/src/services/excel.service.ts) — Multi-format `.xlsx` / `.csv` bulk repository URL parser.
 * [src/services/github.service.ts](file:///c:/Users/ghosh/OneDrive/Desktop/github%20hackqubit/backend/src/services/github.service.ts) — Octokit REST & GraphQL crawler for public repositories.
 * [src/lib/token-pool.ts](file:///c:/Users/ghosh/OneDrive/Desktop/github%20hackqubit/backend/src/lib/token-pool.ts) — Server-side GitHub token pool with round-robin rotation.
-* [src/lib/socket.ts](file:///c:/Users/ghosh/OneDrive/Desktop/github%20hackqubit/backend/src/lib/socket.ts) — Real-time event broadcasting (`activity:new`, `health:updated`, `anticheat:status`).
-* [src/services/alert.service.ts](file:///c:/Users/ghosh/OneDrive/Desktop/github%20hackqubit/backend/src/services/alert.service.ts) — Multi-channel notifications for Slack, Discord, and Telegram with throttling.
+* [src/lib/socket.ts](file:///c:/Users/ghosh/OneDrive/Desktop/repopulse/repopulse-/backend/src/lib/socket.ts) — Real-time event broadcasting (`activity:new`, `health:updated`, `anticheat:status`).
+* [src/services/alert.service.ts](file:///c:/Users/ghosh/OneDrive/Desktop/repopulse/repopulse-/backend/src/services/alert.service.ts) — Multi-channel notifications for Slack, Discord, and Telegram with throttling.
+* [REDIS.md](file:///c:/Users/ghosh/OneDrive/Desktop/repopulse/repopulse-/backend/REDIS.md) — Production-grade Redis caching layer, Cache-Aside pattern, single-flight stampede protection, and benchmark tests (`npm run test:cache`).
 
 ---
 

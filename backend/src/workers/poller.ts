@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.js';
 import { getOctokitClient } from '../lib/octokit.js';
 import { calculateHealthScore } from '../services/health.service.js';
 import { broadcastActivityEvent } from '../lib/socket.js';
+import { cacheService } from '../services/cache/cache.service.js';
 
 let pollerInterval: NodeJS.Timeout | null = null;
 let isPolling = false;
@@ -153,6 +154,11 @@ async function pollAllRepositories() {
 
           // Recompute Health Score
           await calculateHealthScore(repo.id);
+
+          // Targeted Cache Invalidation on New Activity
+          await cacheService.invalidateRepository(repo.id, repo.fullName);
+          await cacheService.invalidateActivities();
+          await cacheService.invalidateContributors(authorLogin);
         }
       }
     } catch (err: any) {

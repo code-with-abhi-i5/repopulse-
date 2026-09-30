@@ -15,11 +15,12 @@ function hashPassword(password: string, salt: string): string {
 
 async function setAdminCredentials() {
   const args = process.argv.slice(2);
-  const identifier = args[0] || process.env.ADMIN_EMAIL || 'admin';
-  const newPassword = args[1] || process.env.ADMIN_PASSWORD || 'admin123';
+  const identifier = args[0] || process.env.ADMIN_EMAIL;
+  const newPassword = args[1] || process.env.ADMIN_PASSWORD;
 
   if (!identifier || !newPassword) {
     console.error('❌ Usage: npm run set-admin <email_or_username> <password>');
+    console.error('   Example: npm run set-admin admin@repopulse.io MySecurePass#2026');
     process.exit(1);
   }
 
