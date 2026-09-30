@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .playwright-mcp/
 .env
+.env.*
+*.env
+!.env.example
