@@ -5,7 +5,7 @@ import { useDemoStore, useRealtimeStore } from '../stores'
 import Github from '../components/icons/Github.jsx'
 import Hero3DTiltCard from '../components/Hero3DTiltCard.jsx'
 import HeroBackground from '../components/HeroBackground.jsx'
-import { mockRepositories, mockContributors } from '../data/mock'
+import { api } from '../lib/api'
 import {
   Zap,
   Activity,
@@ -51,6 +51,13 @@ export default function LandingPage() {
   const [simulatedToast, setSimulatedToast] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
   const [copiedCurl, setCopiedCurl] = useState(false)
+  const [repositories, setRepositories] = useState([])
+  const [contributors, setContributors] = useState([])
+
+  useEffect(() => {
+    api.getRepositories().then((data) => setRepositories(data || [])).catch(() => {})
+    api.getContributors().then((data) => setContributors(data || [])).catch(() => {})
+  }, [])
 
   // Dynamic live event stream inside the cockpit
   const [liveStreamEvents, setLiveStreamEvents] = useState([
@@ -710,7 +717,7 @@ export default function LandingPage() {
                     </div>
 
                     <div className="space-y-2.5">
-                      {mockRepositories.slice(0, 4).map((repo) => (
+                      {repositories.slice(0, 4).map((repo) => (
                         <div
                           key={repo.id}
                           className="p-3 rounded-xl bg-slate-950/70 border border-white/[0.05] hover:border-indigo-500/30 flex items-center justify-between text-xs transition-all"
@@ -819,7 +826,7 @@ export default function LandingPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {mockContributors.slice(0, 3).map((c) => (
+                    {contributors.slice(0, 3).map((c) => (
                       <div
                         key={c.id}
                         className="p-3.5 rounded-xl bg-slate-950/70 border border-white/[0.06] flex items-center gap-3"
@@ -853,7 +860,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <Sparkles className="w-4 h-4 text-indigo-400" />
                   <span>
-                    Fully interactive simulation with 6 mock repositories, alerts, and live charts.
+                    Interactive telemetry with real-time GitHub repositories, alerts, and live charts.
                   </span>
                 </div>
 
@@ -1155,9 +1162,9 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* 6 Repository Cards */}
+        {/* Repository Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockRepositories.map((repo) => (
+          {repositories.map((repo) => (
             <div
               key={repo.id}
               className="p-6 rounded-2xl glass-card-interactive flex flex-col justify-between group"

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { mockContributors, mockCommits } from '../data/mock'
+import { useState, useMemo, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatNumber, formatDate, formatRelativeTime } from '../lib/utils'
 import {
   Users,
@@ -19,14 +19,21 @@ import {
   UploadCloud,
   ShieldCheck,
   TrendingUp,
+  GitPullRequest,
+  AlertCircle,
 } from 'lucide-react'
 
 export default function ContributorsPage() {
-  const [contributors] = useState(mockContributors)
+  const [contributors, setContributors] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [sortBy, setSortBy] = useState('commits')
   const [selectedContributor, setSelectedContributor] = useState(null)
+  const [activeTab, setActiveTab] = useState('commits')
+
+  useEffect(() => {
+    api.getContributors().then((data) => setContributors(data || [])).catch(() => setContributors([]))
+  }, [])
 
   // Unique teams list
   const uniqueTeams = useMemo(() => {
@@ -51,8 +58,8 @@ export default function ContributorsPage() {
     return contributors
       .filter((c) => {
         const matchesSearch =
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.login.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (c.login || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
           (c.teamName && c.teamName.toLowerCase().includes(searchQuery.toLowerCase())) ||
           (c.primaryRepo && c.primaryRepo.toLowerCase().includes(searchQuery.toLowerCase()))
 
@@ -74,12 +81,41 @@ export default function ContributorsPage() {
       })
   }, [contributors, searchQuery, selectedTeam, sortBy])
 
-  // Contributor's commits for modal
-  const contributorCommits = useMemo(() => {
-    if (!selectedContributor) return []
-    return mockCommits
-      .filter((c) => c.author.login === selectedContributor.login)
-      .slice(0, 10)
+  // Contributor's details for modal
+  const [contributorCommits, setContributorCommits] = useState([])
+  const [contributorPRs, setContributorPRs] = useState([])
+  const [contributorIssues, setContributorIssues] = useState([])
+
+  useEffect(() => {
+    if (!selectedContributor) {
+      setContributorCommits([])
+      setContributorPRs([])
+      setContributorIssues([])
+      return
+    }
+    if (selectedContributor.commitsList && selectedContributor.commitsList.length > 0) {
+      setContributorCommits(selectedContributor.commitsList)
+      setContributorPRs([])
+      setContributorIssues([])
+      return
+    }
+    api.getContributorByLogin(selectedContributor.login)
+      .then((data) => {
+        if (data) {
+          setContributorCommits(data.commits || [])
+          setContributorPRs(data.pullRequests || [])
+          setContributorIssues(data.issues || [])
+        } else {
+          setContributorCommits([])
+          setContributorPRs([])
+          setContributorIssues([])
+        }
+      })
+      .catch(() => {
+        setContributorCommits([])
+        setContributorPRs([])
+        setContributorIssues([])
+      })
   }, [selectedContributor])
 
   return (
@@ -307,6 +343,17 @@ export default function ContributorsPage() {
       </div>
 
       {/* Contributor Directory Grid */}
+      {filteredContributors.length === 0 ? (
+        <div className="text-center py-16 px-4 rounded-2xl glass-card border border-white/10 space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <Users className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white">No Contributors Found</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Contributors will appear automatically once repositories are added and commit activities are scanned.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredContributors.map((c, idx) => {
           const pushes = c.pushesCount || Math.floor(c.commits * 0.35)
@@ -385,6 +432,7 @@ export default function ContributorsPage() {
           )
         })}
       </div>
+      )}
 
       {/* Deep-Dive Contributor Modal */}
       {selectedContributor && (
@@ -462,37 +510,114 @@ export default function ContributorsPage() {
               </div>
             </div>
 
-            {/* Recent Commits with lines added / lines deleted */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Code2 className="w-4 h-4 text-indigo-400" />
-                Recent Verified Commits by {selectedContributor.name}
-              </h4>
+            {/* Tabs for Commits, PRs, Issues */}
+            <div className="flex border-b border-white/[0.08] mb-4 overflow-x-auto hide-scrollbar">
+              <button
+                onClick={() => setActiveTab('commits')}
+                className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  activeTab === 'commits' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Code2 className="w-4 h-4" />
+                Commits ({contributorCommits.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('prs')}
+                className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  activeTab === 'prs' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <GitPullRequest className="w-4 h-4" />
+                Pull Requests ({contributorPRs.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('issues')}
+                className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  activeTab === 'issues' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <AlertCircle className="w-4 h-4" />
+                Issues ({contributorIssues.length})
+              </button>
+            </div>
 
+            <div className="space-y-3">
               <div className="divide-y divide-white/[0.06] border border-white/[0.08] rounded-xl bg-slate-950/60 p-2">
-                {contributorCommits.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-slate-500">
-                    No recent commits found in current window.
-                  </div>
-                ) : (
-                  contributorCommits.map((c) => (
-                    <div key={c.id} className="py-2.5 px-3 flex items-center justify-between text-xs">
-                      <div className="min-w-0 pr-4">
-                        <p className="font-semibold text-slate-200 truncate">{c.message}</p>
-                        <span className="text-slate-500 text-[11px]">
-                          {formatRelativeTime(c.timestamp)} • <span className="font-mono text-indigo-400">#{c.sha}</span>
-                        </span>
-                      </div>
-                      <div className="font-mono shrink-0 text-xs flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          +{c.additions}
-                        </span>
-                        <span className="px-2 py-0.5 rounded font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                          -{c.deletions}
-                        </span>
-                      </div>
+                {activeTab === 'commits' && (
+                  contributorCommits.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500">
+                      No recent commits found in current window.
                     </div>
-                  ))
+                  ) : (
+                    contributorCommits.map((c) => (
+                      <div key={c.id} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
+                        <div className="min-w-0 pr-4">
+                          <p className="font-semibold text-slate-200 truncate">{c.message}</p>
+                          <span className="text-slate-500 text-[11px]">
+                            {formatRelativeTime(c.timestamp)} • <span className="font-mono text-indigo-400">#{c.sha}</span>
+                          </span>
+                        </div>
+                        <div className="font-mono shrink-0 text-xs flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            +{c.additions}
+                          </span>
+                          <span className="px-2 py-0.5 rounded font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                            -{c.deletions}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {activeTab === 'prs' && (
+                  contributorPRs.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500">
+                      No pull requests found.
+                    </div>
+                  ) : (
+                    contributorPRs.map((pr) => (
+                      <div key={pr.id} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
+                        <div className="min-w-0 pr-4 flex items-center gap-3">
+                          <GitPullRequest className={`w-4 h-4 shrink-0 ${pr.state === 'MERGED' ? 'text-purple-400' : pr.state === 'OPEN' ? 'text-emerald-400' : 'text-rose-400'}`} />
+                          <div className="min-w-0">
+                            <a href={pr.url} target="_blank" rel="noreferrer" className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block">{pr.title}</a>
+                            <span className="text-slate-500 text-[11px]">
+                              {formatRelativeTime(pr.createdAt)} • <span className="font-mono">#{pr.number}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${pr.state === 'MERGED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : pr.state === 'OPEN' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                          {pr.state}
+                        </span>
+                      </div>
+                    ))
+                  )
+                )}
+
+                {activeTab === 'issues' && (
+                  contributorIssues.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500">
+                      No issues found.
+                    </div>
+                  ) : (
+                    contributorIssues.map((issue) => (
+                      <div key={issue.id} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
+                        <div className="min-w-0 pr-4 flex items-center gap-3">
+                          <AlertCircle className={`w-4 h-4 shrink-0 ${issue.state === 'OPEN' ? 'text-emerald-400' : 'text-purple-400'}`} />
+                          <div className="min-w-0">
+                            <a href={issue.url} target="_blank" rel="noreferrer" className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block">{issue.title}</a>
+                            <span className="text-slate-500 text-[11px]">
+                              {formatRelativeTime(issue.createdAt)} • <span className="font-mono">#{issue.number}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${issue.state === 'OPEN' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
+                          {issue.state}
+                        </span>
+                      </div>
+                    ))
+                  )
                 )}
               </div>
             </div>

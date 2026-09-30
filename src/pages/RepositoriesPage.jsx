@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { mockRepositories, mockHealthScores } from '../data/mock'
 import { api } from '../lib/api'
 import { formatNumber, formatRelativeTime } from '../lib/utils'
 import {
@@ -44,7 +43,8 @@ const languageColors = {
 
 export default function RepositoriesPage() {
   const navigate = useNavigate()
-  const [repositories, setRepositories] = useState(mockRepositories)
+  const [repositories, setRepositories] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState('all')
   const [sortBy, setSortBy] = useState('health')
@@ -66,13 +66,16 @@ export default function RepositoriesPage() {
   const [compareList, setCompareList] = useState([])
   const [isCompareOpen, setIsCompareOpen] = useState(false)
 
-  // Fetch initial repositories from Backend if available
+  // Fetch initial repositories from Backend
   useEffect(() => {
+    setLoading(true)
     api.getRepositories().then((data) => {
-      if (data && data.length > 0) {
-        setRepositories(data)
-      }
-    }).catch(() => {})
+      setRepositories(data || [])
+    }).catch(() => {
+      setRepositories([])
+    }).finally(() => {
+      setLoading(false)
+    })
   }, [])
 
   // Language options
@@ -289,7 +292,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
     return repositories
       .filter((repo) => {
         const matchesSearch =
-          repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (repo.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.owner?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.teamName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -473,8 +476,27 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
         </div>
       </div>
 
-      {/* Repository Cards (Grid Mode) */}
-      {viewMode === 'grid' ? (
+      {/* Empty State or Repository List */}
+      {filteredRepos.length === 0 ? (
+        <div className="text-center py-16 px-4 rounded-2xl glass-card border border-white/10 space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <FolderGit2 className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white">No Repositories Connected</h3>
+            <p className="text-sm text-slate-400 max-w-md mx-auto">
+              Your database is clean. Click "Bulk Import Teams & Repos" to upload your hackathon Excel sheet or paste repository links.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/25 transition-all"
+          >
+            <UploadCloud className="w-4 h-4" />
+            Bulk Import Teams & Repos
+          </button>
+        </div>
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredRepos.map((repo) => {
             const isCompared = compareList.includes(repo.id)

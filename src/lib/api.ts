@@ -1,15 +1,7 @@
 // ============================================================
-// RepoPulse Frontend — Unified API Client (With Offline Mock Fallback)
+// RepoPulse Frontend — Unified API Client (Live Backend)
 // ============================================================
 
-import {
-  mockRepositories,
-  mockContributors,
-  mockActivityEvents,
-  mockAlerts,
-  mockPullRequests,
-  mockIssues,
-} from '../data/mock';
 import type { Repository, ActivityEvent, Contributor, Alert, PullRequest, Issue } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
@@ -31,7 +23,7 @@ async function safeFetch<T>(endpoint: string, options: RequestInit = {}, fallbac
     const json = await res.json();
     return (json.data !== undefined ? json.data : json) as T;
   } catch (err: any) {
-    console.warn(`[RepoPulse API] Fetch failed for ${endpoint}. Using offline mock fallback.`, err.message);
+    console.warn(`[RepoPulse API] Fetch failed for ${endpoint}:`, err.message);
     return fallback;
   }
 }
@@ -46,13 +38,35 @@ export const api = {
     return safeFetch<Repository[]>(
       `/repositories?${query.toString()}`,
       { method: 'GET' },
-      mockRepositories
+      []
     );
   },
 
   async getRepositoryById(id: string): Promise<Repository | null> {
-    const fallback = mockRepositories.find((r) => r.id === id || r.fullName === id) || null;
-    return safeFetch<Repository | null>(`/repositories/${id}`, { method: 'GET' }, fallback);
+    const encodedId = encodeURIComponent(id);
+    const repo = await safeFetch<any>(`/repositories/${encodedId}`, { method: 'GET' }, null);
+    
+    if (repo) {
+      if (repo.commits) {
+        repo.commits = repo.commits.map((c: any) => ({
+          ...c,
+          author: { name: c.authorLogin, avatarUrl: `https://github.com/${c.authorLogin}.png` }
+        }));
+      }
+      if (repo.pullRequests) {
+        repo.pullRequests = repo.pullRequests.map((pr: any) => ({
+          ...pr,
+          author: { name: pr.authorLogin, avatarUrl: `https://github.com/${pr.authorLogin}.png` }
+        }));
+      }
+      if (repo.issues) {
+        repo.issues = repo.issues.map((issue: any) => ({
+          ...issue,
+          author: { name: issue.authorLogin, avatarUrl: `https://github.com/${issue.authorLogin}.png` }
+        }));
+      }
+    }
+    return repo;
   },
 
   async triggerAudit(repoId: string, hackathonStartTime: string): Promise<any> {
@@ -64,8 +78,31 @@ export const api = {
       });
       return await res.json();
     } catch {
-      return { status: 'VERIFIED_FRESH', reasons: ['Offline audit simulated'] };
+      return { status: 'UNKNOWN', reasons: ['API audit connection failed'] };
     }
+  },
+
+  async syncRepository(fullName: string, teamName?: string, hackathonBatch?: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/repositories/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, teamName, hackathonBatch }),
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { error: err.message };
+    }
+  },
+
+  async deleteRepository(id: string, adminKey: string = 'hackqubit-admin-secret-2026'): Promise<any> {
+    const res = await fetch(`${API_BASE}/repositories/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-admin-key': adminKey,
+      },
+    });
+    return await res.json();
   },
 
   // Upload Excel / CSV file
@@ -124,25 +161,49 @@ export const api = {
 
   // Activities
   async getActivities(): Promise<ActivityEvent[]> {
-    return safeFetch<ActivityEvent[]>('/activities', { method: 'GET' }, mockActivityEvents);
+    const data = await safeFetch<any[]>('/activities', { method: 'GET' }, []);
+    return data.map((evt: any) => ({
+      ...evt,
+      actor: {
+        login: evt.actorLogin,
+        name: evt.actorName || evt.actorLogin,
+        avatarUrl: evt.actorAvatarUrl,
+      },
+    })) as ActivityEvent[];
   },
 
   // Contributors
   async getContributors(): Promise<Contributor[]> {
-    return safeFetch<Contributor[]>('/contributors', { method: 'GET' }, mockContributors);
+    const data = await safeFetch<any[]>('/contributors', { method: 'GET' }, []);
+    return data.map((c: any) => ({
+      ...c,
+      commits: c.totalCommits || c.commits || 0,
+    })) as Contributor[];
+  },
+
+  async getContributorByLogin(login: string): Promise<any> {
+    return safeFetch<any>(`/contributors/${login}`, { method: 'GET' }, null);
   },
 
   // Pull Requests & Issues
   async getPullRequests(): Promise<PullRequest[]> {
-    return safeFetch<PullRequest[]>('/pull-requests', { method: 'GET' }, mockPullRequests);
+    const prs = await safeFetch<any[]>('/pull-requests', { method: 'GET' }, []);
+    return prs.map((pr: any) => ({
+      ...pr,
+      author: { name: pr.authorLogin, avatarUrl: `https://github.com/${pr.authorLogin}.png` }
+    })) as PullRequest[];
   },
 
   async getIssues(): Promise<Issue[]> {
-    return safeFetch<Issue[]>('/issues', { method: 'GET' }, mockIssues);
+    const issues = await safeFetch<any[]>('/issues', { method: 'GET' }, []);
+    return issues.map((issue: any) => ({
+      ...issue,
+      author: { name: issue.authorLogin, avatarUrl: `https://github.com/${issue.authorLogin}.png` }
+    })) as Issue[];
   },
 
   // Alerts
   async getAlerts(): Promise<Alert[]> {
-    return safeFetch<Alert[]>('/alerts', { method: 'GET' }, mockAlerts);
+    return safeFetch<Alert[]>('/alerts', { method: 'GET' }, []);
   },
 };

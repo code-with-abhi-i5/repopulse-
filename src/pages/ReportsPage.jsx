@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { mockReports, mockRepositories } from '../data/mock'
+import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatDate, formatRelativeTime } from '../lib/utils'
 import {
   FileText,
@@ -19,9 +19,14 @@ import {
 } from 'lucide-react'
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState(mockReports)
-  const [selectedReport, setSelectedReport] = useState(mockReports[0])
+  const [reports, setReports] = useState([])
+  const [selectedReport, setSelectedReport] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [repoCount, setRepoCount] = useState(0)
+
+  useEffect(() => {
+    api.getRepositories().then((data) => setRepoCount((data || []).length)).catch(() => setRepoCount(0))
+  }, [])
 
   // Generate new report
   const handleGenerateReport = () => {
@@ -39,7 +44,7 @@ export default function ReportsPage() {
         prsMerged: 48,
         issuesClosed: 42,
         topContributor: 'Abhi Ghosh',
-        repositories: mockRepositories.length,
+        repositories: repoCount,
       }
       setReports([newRep, ...reports])
       setSelectedReport(newRep)

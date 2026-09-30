@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useUIStore, useDemoStore, useNotificationStore, useRealtimeStore } from './stores'
-import { mockNotifications, mockActivityEvents } from './data/mock'
+import { useUIStore, useNotificationStore, useRealtimeStore } from './stores'
+import { api } from './lib/api'
 import { useRealtimeSocket } from './hooks/useRealtimeSocket'
 import LandingPage from './pages/LandingPage.jsx'
 import DashboardLayout from './components/layout/DashboardLayout.jsx'
@@ -17,18 +17,32 @@ import ReportsPage from './pages/ReportsPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import ActivityPage from './pages/ActivityPage.jsx'
 
-function DemoInitializer() {
-  const { isDemoMode } = useDemoStore()
+function DataInitializer() {
   const { setNotifications } = useNotificationStore()
-  const { setLiveEvents, setConnectionStatus } = useRealtimeStore()
+  const { setLiveEvents } = useRealtimeStore()
 
   useEffect(() => {
-    if (isDemoMode) {
-      setNotifications(mockNotifications)
-      setLiveEvents(mockActivityEvents)
-      setConnectionStatus('demo')
-    }
-  }, [isDemoMode])
+    api.getAlerts().then((alerts) => {
+      if (alerts && Array.isArray(alerts)) {
+        const notifs = alerts.map((a) => ({
+          id: a.id,
+          title: a.title,
+          message: a.message,
+          type: a.type || 'info',
+          read: a.read || false,
+          createdAt: a.createdAt,
+          repositoryId: a.repositoryId,
+        }))
+        setNotifications(notifs)
+      }
+    }).catch(() => {})
+
+    api.getActivities().then((activities) => {
+      if (activities && Array.isArray(activities)) {
+        setLiveEvents(activities)
+      }
+    }).catch(() => {})
+  }, [])
 
   return null
 }
@@ -58,7 +72,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeManager />
-      <DemoInitializer />
+      <DataInitializer />
       <RealtimeManager />
       <Routes>
         <Route path="/" element={<LandingPage />} />

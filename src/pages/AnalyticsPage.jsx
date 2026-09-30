@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import {
   generateTimeSeriesData,
-  mockRepositories,
 } from '../data/mock'
 import { formatNumber } from '../lib/utils'
 import {

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { mockIssues, mockRepositories } from '../data/mock'
+import { useState, useMemo, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatRelativeTime } from '../lib/utils'
 import {
   AlertCircle,
@@ -11,13 +11,20 @@ import {
   Flame,
   AlertTriangle,
   Tag,
+  FolderGit2,
 } from 'lucide-react'
 
 export default function IssuesPage() {
-  const [issues] = useState(mockIssues)
+  const [issues, setIssues] = useState([])
+  const [repositories, setRepositories] = useState([])
   const [selectedState, setSelectedState] = useState('all') // 'all' | 'open' | 'closed' | 'stale'
   const [selectedRepo, setSelectedRepo] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    api.getIssues().then((data) => setIssues(data || [])).catch(() => setIssues([]))
+    api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
+  }, [])
 
   // Metrics
   const metrics = useMemo(() => {
@@ -29,7 +36,7 @@ export default function IssuesPage() {
     const avgResponseTime =
       withResponse.length > 0
         ? (withResponse.reduce((acc, i) => acc + (i.firstResponseHours || 0), 0) / withResponse.length).toFixed(1)
-        : '2.1'
+        : '--'
 
     return { total, open, closed, stale, avgResponseTime }
   }, [issues])
@@ -44,13 +51,25 @@ export default function IssuesPage() {
 
       const matchRepo = selectedRepo === 'all' || issue.repositoryId === selectedRepo
       const matchSearch =
-        issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        issue.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (issue.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (issue.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         String(issue.number).includes(searchQuery)
 
       return matchState && matchRepo && matchSearch
     })
   }, [issues, selectedState, selectedRepo, searchQuery])
+
+  // Group filtered issues by repository
+  const groupedIssues = useMemo(() => {
+    const groups = {}
+    filteredIssues.forEach(issue => {
+      const repo = repositories.find(r => r.id === issue.repositoryId)
+      const repoName = repo ? repo.name : 'Unknown Repository'
+      if (!groups[repoName]) groups[repoName] = []
+      groups[repoName].push(issue)
+    })
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filteredIssues, repositories])
 
   return (
     <div className="space-y-6">
@@ -135,11 +154,10 @@ export default function IssuesPage() {
               <button
                 key={s.id}
                 onClick={() => setSelectedState(s.id)}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  selectedState === s.id
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${selectedState === s.id
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 {s.label}
               </button>
@@ -152,7 +170,7 @@ export default function IssuesPage() {
             className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">All Repositories</option>
-            {mockRepositories.map((r) => (
+            {repositories.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
@@ -162,94 +180,106 @@ export default function IssuesPage() {
       </div>
 
       {/* Issues List */}
-      <div className="divide-y divide-border/60 rounded-2xl bg-card border border-border shadow-xs overflow-hidden">
-        {filteredIssues.length === 0 ? (
-          <div className="p-12 text-center text-sm text-muted-foreground">
+      <div className="space-y-6">
+        {groupedIssues.length === 0 ? (
+          <div className="p-12 rounded-2xl bg-card border border-border shadow-xs text-center text-sm text-muted-foreground">
             No issues match the selected criteria.
           </div>
         ) : (
-          filteredIssues.map((issue) => (
-            <div
-              key={issue.id}
-              className="p-4 hover:bg-muted/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
-            >
-              <div className="flex items-start gap-3.5 min-w-0">
-                <div
-                  className={`mt-1 p-1.5 rounded-lg shrink-0 ${
-                    issue.state === 'open'
-                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                      : 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
-                  }`}
-                >
-                  <AlertCircle className="w-4 h-4" />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={issue.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
-                    >
-                      {issue.title}
-                    </a>
-                    <span className="text-xs text-muted-foreground font-mono">#{issue.number}</span>
-                    {issue.isStale && (
-                      <span className="px-2 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                        Stale (&gt;14d)
-                      </span>
-                    )}
-                    {issue.labels?.map((label) => (
-                      <span
-                        key={label.name}
-                        className="px-2 py-0.2 rounded text-[10px] font-medium"
-                        style={{
-                          backgroundColor: `${label.color}15`,
-                          color: label.color,
-                          border: `1px solid ${label.color}40`,
-                        }}
-                      >
-                        {label.name}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                      <img
-                        src={issue.author.avatarUrl}
-                        alt={issue.author.name}
-                        className="w-4 h-4 rounded-full border border-border"
-                      />
-                      <span className="font-medium text-foreground">{issue.author.name}</span>
-                    </div>
-                    <span>•</span>
-                    <span>created {formatRelativeTime(issue.createdAt)}</span>
-                    {issue.firstResponseHours && (
-                      <>
-                        <span>•</span>
-                        <span className="text-cyan-500 font-medium">
-                          First response in {issue.firstResponseHours.toFixed(1)}h
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
-                <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-secondary text-secondary-foreground uppercase">
-                  {issue.state}
+          groupedIssues.map(([repoName, repoIssues]) => (
+            <div key={repoName} className="rounded-2xl bg-card border border-border shadow-xs overflow-hidden">
+              <div className="bg-muted/30 px-4 py-3 border-b border-border/60 flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold text-foreground">{repoName}</h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border ml-auto">
+                  {repoIssues.length} {repoIssues.length === 1 ? 'issue' : 'issues'}
                 </span>
-                <a
-                  href={issue.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                >
-                  <ArrowUpRight className="w-4 h-4" />
-                </a>
+              </div>
+              <div className="divide-y divide-border/60">
+                {repoIssues.map((issue) => (
+                  <div
+                    key={issue.id}
+                    className="p-4 hover:bg-muted/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div
+                        className={`mt-1 p-1.5 rounded-lg shrink-0 ${issue.state === 'open'
+                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                            : 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
+                          }`}
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <a
+                            href={issue.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                          >
+                            {issue.title}
+                          </a>
+                          <span className="text-xs text-muted-foreground font-mono">#{issue.number}</span>
+                          {issue.isStale && (
+                            <span className="px-2 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                              Stale (&gt;14d)
+                            </span>
+                          )}
+                          {issue.labels?.map((label) => (
+                            <span
+                              key={label.name}
+                              className="px-2 py-0.2 rounded text-[10px] font-medium"
+                              style={{
+                                backgroundColor: `${label.color}15`,
+                                color: label.color,
+                                border: `1px solid ${label.color}40`,
+                              }}
+                            >
+                              {label.name}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <img
+                              src={issue.author.avatarUrl}
+                              alt={issue.author.name}
+                              className="w-4 h-4 rounded-full border border-border"
+                            />
+                            <span className="font-medium text-foreground">{issue.author.name}</span>
+                          </div>
+                          <span>•</span>
+                          <span>created {formatRelativeTime(issue.createdAt)}</span>
+                          {issue.firstResponseHours && (
+                            <>
+                              <span>•</span>
+                              <span className="text-cyan-500 font-medium">
+                                First response in {issue.firstResponseHours.toFixed(1)}h
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                      <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-secondary text-secondary-foreground uppercase">
+                        {issue.state}
+                      </span>
+                      <a
+                        href={issue.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <ArrowUpRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))

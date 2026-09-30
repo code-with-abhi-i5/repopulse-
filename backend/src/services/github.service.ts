@@ -135,6 +135,36 @@ export async function syncRepository(
         });
       }
 
+      // Check if commit already exists
+      const existingCommit = await prisma.commit.findUnique({
+        where: { sha: c.sha },
+        select: { id: true, additions: true, deletions: true }
+      });
+
+      let additions = existingCommit?.additions || 0;
+      let deletions = existingCommit?.deletions || 0;
+      let filesChanged = 1;
+
+      // Only fetch detailed commit if we don't have stats yet
+      if (!existingCommit || (additions === 0 && deletions === 0)) {
+        try {
+          const { data: detailedCommit } = await octokit.rest.repos.getCommit({
+            owner,
+            repo: repoName,
+            ref: c.sha,
+          });
+          if (detailedCommit.stats) {
+            additions = detailedCommit.stats.additions || 0;
+            deletions = detailedCommit.stats.deletions || 0;
+          }
+          if (detailedCommit.files) {
+            filesChanged = detailedCommit.files.length;
+          }
+        } catch (detailErr) {
+          console.warn(`Could not fetch details for commit ${c.sha}`);
+        }
+      }
+
       await prisma.commit.upsert({
         where: { sha: c.sha },
         create: {
@@ -144,14 +174,36 @@ export async function syncRepository(
           branch: repoData.default_branch,
           repositoryId: repo.id,
           timestamp: new Date(c.commit.author?.date || Date.now()),
-          additions: 0,
-          deletions: 0,
-          filesChanged: 1,
+          additions,
+          deletions,
+          filesChanged,
           url: c.html_url,
           isBulkDump: false,
         },
-        update: {},
+        update: {
+          additions,
+          deletions,
+          filesChanged,
+        },
       });
+      
+      // Update the contributor's overall additions/deletions and commits count
+      // using the already defined authorLogin from line 122
+      if (authorLogin !== 'unknown') {
+        const stats = await prisma.commit.aggregate({
+          where: { authorLogin },
+          _sum: { additions: true, deletions: true },
+          _count: { _all: true }
+        });
+        await prisma.contributor.updateMany({
+          where: { login: authorLogin },
+          data: {
+            additions: stats._sum.additions || 0,
+            deletions: stats._sum.deletions || 0,
+            totalCommits: stats._count._all || 0,
+          }
+        });
+      }
     }
   } catch (err: any) {
     console.warn(`⚠️ [GitHub Sync] Could not fetch commits for ${fullName}: ${err.message}`);
@@ -221,6 +273,63 @@ export async function syncRepository(
     }
   } catch (err: any) {
     console.warn(`⚠️ [GitHub Sync] Could not fetch PRs for ${fullName}: ${err.message}`);
+  }
+
+  // 4.5 Fetch Issues
+  try {
+    const { data: issues } = await octokit.rest.issues.listForRepo({
+      owner,
+      repo: repoName,
+      state: 'all',
+      per_page: 30,
+    });
+
+    for (const i of issues) {
+      if (i.pull_request) continue; // Skip PRs, handled separately
+
+      const authorLogin = i.user?.login || 'unknown';
+      if (i.user?.login) {
+        await prisma.contributor.upsert({
+          where: { login: i.user.login },
+          create: {
+            login: i.user.login,
+            avatarUrl: i.user.avatar_url,
+            primaryRepo: fullName,
+            repositories: [fullName],
+          },
+          update: {},
+        });
+      }
+
+      await prisma.issue.upsert({
+        where: {
+          repositoryId_number: {
+            repositoryId: repo.id,
+            number: i.number,
+          },
+        },
+        create: {
+          number: i.number,
+          title: i.title,
+          state: i.state === 'closed' ? 'CLOSED' : 'OPEN',
+          authorLogin,
+          repositoryId: repo.id,
+          createdAt: new Date(i.created_at),
+          updatedAt: new Date(i.updated_at),
+          closedAt: i.closed_at ? new Date(i.closed_at) : null,
+          url: i.html_url,
+          labels: typeof i.labels === 'object' ? i.labels.map((l: any) => ({ name: l.name || l, color: l.color || 'cccccc' })) : [],
+        },
+        update: {
+          title: i.title,
+          state: i.state === 'closed' ? 'CLOSED' : 'OPEN',
+          updatedAt: new Date(i.updated_at),
+          closedAt: i.closed_at ? new Date(i.closed_at) : null,
+        },
+      });
+    }
+  } catch (err: any) {
+    console.warn(`⚠️ [GitHub Sync] Could not fetch issues for ${fullName}: ${err.message}`);
   }
 
   // 5. Calculate Health Score

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { mockActivityEvents, mockRepositories, contributorRefs } from '../data/mock'
+import { api } from '../lib/api'
 import { formatNumber, formatRelativeTime } from '../lib/utils'
 import { useRealtimeStore } from '../stores'
 import {
@@ -42,70 +42,37 @@ const eventTypeIcons = {
 
 export default function ActivityPage() {
   const { liveEvents, isConnected, addLiveEvent } = useRealtimeStore()
-  const [events, setEvents] = useState(mockActivityEvents)
+  const [events, setEvents] = useState([])
+  const [repositories, setRepositories] = useState([])
   const [selectedType, setSelectedType] = useState('all')
   const [selectedRepo, setSelectedRepo] = useState('all')
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isLivePaused, setIsLivePaused] = useState(false)
 
+  useEffect(() => {
+    api.getActivities().then((data) => setEvents(data || [])).catch(() => setEvents([]))
+    api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
+  }, [])
+
   // Unique teams from repos and events
   const uniqueTeams = useMemo(() => {
     const teams = new Set()
-    mockRepositories.forEach((r) => r.teamName && teams.add(r.teamName))
+    repositories.forEach((r) => r.teamName && teams.add(r.teamName))
     events.forEach((e) => e.teamName && teams.add(e.teamName))
     return ['all', ...Array.from(teams)]
-  }, [events])
+  }, [events, repositories])
 
-  // Periodic event injector when live is not paused
+  // Merge live events into event list
   useEffect(() => {
-    if (isLivePaused) return
-
-    const interval = setInterval(() => {
-      const types = ['push', 'push', 'pull_request', 'issues', 'workflow_run', 'push']
-      const randomType = types[Math.floor(Math.random() * types.length)]
-      const randomRepo = mockRepositories[Math.floor(Math.random() * mockRepositories.length)]
-      const randomActor = contributorRefs[Math.floor(Math.random() * contributorRefs.length)]
-      const branches = ['main', 'feat/auth', 'fix/inventory-sync', 'dev', 'feat/model-eval']
-      const randomBranch = branches[Math.floor(Math.random() * branches.length)]
-      const linesAdded = Math.floor(Math.random() * 420) + 20
-      const linesDeleted = Math.floor(Math.random() * 85) + 4
-      const commitCount = Math.floor(Math.random() * 3) + 1
-
-      const titles = {
-        push: `Pushed ${commitCount} commit${commitCount > 1 ? 's' : ''} to ${randomBranch}`,
-        pull_request: `Opened PR #${Math.floor(Math.random() * 50) + 400}: Performance optimization`,
-        issues: `Updated issue #${Math.floor(Math.random() * 50) + 150}: Edge case handling`,
-        workflow_run: `CI Build passed on ${randomBranch}`,
-        star: 'Starred the repository',
-      }
-
-      const newEvent = {
-        id: `evt-${Date.now()}`,
-        type: randomType,
-        repositoryId: randomRepo.id,
-        repositoryName: randomRepo.fullName,
-        teamName: randomRepo.teamName || 'Hackathon Team',
-        actor: randomActor,
-        timestamp: new Date().toISOString(),
-        title: titles[randomType] || 'Updated repository status',
-        description:
-          randomType === 'push'
-            ? `Automated commit telemetry • ${commitCount} commits verified`
-            : 'Automated telemetry stream',
-        branch: randomBranch,
-        linesAdded: randomType === 'push' || randomType === 'pull_request' ? linesAdded : undefined,
-        linesDeleted: randomType === 'push' || randomType === 'pull_request' ? linesDeleted : undefined,
-        commitCount: randomType === 'push' ? commitCount : undefined,
-        commitSha: Math.random().toString(16).slice(2, 9),
-      }
-
-      setEvents((prev) => [newEvent, ...prev.slice(0, 50)])
-      addLiveEvent(newEvent)
-    }, 6000)
-
-    return () => clearInterval(interval)
-  }, [isLivePaused, addLiveEvent])
+    if (liveEvents.length > 0 && !isLivePaused) {
+      setEvents((prev) => {
+        const existingIds = new Set(prev.map(e => e.id))
+        const newOnes = liveEvents.filter(e => !existingIds.has(e.id))
+        return [...newOnes, ...prev].slice(0, 100)
+      })
+    }
+  }, [liveEvents, isLivePaused])
 
   // Real-time telemetry summary metrics
   const telemetryStats = useMemo(() => {
@@ -136,9 +103,9 @@ export default function ActivityPage() {
       const matchRepo = selectedRepo === 'all' || e.repositoryName === selectedRepo
       const matchTeam = selectedTeam === 'all' || e.teamName === selectedTeam
       const matchSearch =
-        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.actor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.repositoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.actor?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.repositoryName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (e.teamName && e.teamName.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (e.description && e.description.toLowerCase().includes(searchQuery.toLowerCase()))
       return matchType && matchRepo && matchTeam && matchSearch
@@ -303,7 +270,7 @@ export default function ActivityPage() {
             className="px-3 py-1.5 rounded-lg bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             <option value="all">All Repositories</option>
-            {mockRepositories.map((r) => (
+            {repositories.map((r) => (
               <option key={r.id} value={r.fullName}>
                 {r.fullName}
               </option>

@@ -56,8 +56,8 @@ interface DemoState {
 }
 
 export const useDemoStore = create<DemoState>((set) => ({
-  isDemoMode: true,
-  isSimulationRunning: true,
+  isDemoMode: false,
+  isSimulationRunning: false,
   setDemoMode: (on) => set({ isDemoMode: on }),
   setSimulationRunning: (running) => set({ isSimulationRunning: running }),
 }));

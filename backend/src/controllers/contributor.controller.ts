@@ -33,6 +33,7 @@ export async function getContributorByLogin(req: Request, res: Response) {
       include: {
         commits: { take: 20, orderBy: { timestamp: 'desc' } },
         pullRequests: { take: 10, orderBy: { createdAt: 'desc' } },
+        issues: { take: 10, orderBy: { createdAt: 'desc' } },
       },
     });
 

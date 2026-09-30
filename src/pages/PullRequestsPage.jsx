@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { mockPullRequests, mockRepositories } from '../data/mock'
+import { useState, useMemo, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatRelativeTime } from '../lib/utils'
 import {
   GitPullRequest,
@@ -16,10 +16,16 @@ import {
 } from 'lucide-react'
 
 export default function PullRequestsPage() {
-  const [pullRequests] = useState(mockPullRequests)
+  const [pullRequests, setPullRequests] = useState([])
+  const [repositories, setRepositories] = useState([])
   const [selectedState, setSelectedState] = useState('all') // 'all' | 'open' | 'merged' | 'closed'
   const [selectedRepo, setSelectedRepo] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    api.getPullRequests().then((data) => setPullRequests(data || [])).catch(() => setPullRequests([]))
+    api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
+  }, [])
 
   // PR Metrics
   const metrics = useMemo(() => {
@@ -30,7 +36,7 @@ export default function PullRequestsPage() {
     const avgLatency =
       withLatency.length > 0
         ? (withLatency.reduce((acc, p) => acc + (p.reviewLatencyHours || 0), 0) / withLatency.length).toFixed(1)
-        : '3.4'
+        : '--'
     const mergeRate = Math.round((merged / (total || 1)) * 100)
 
     return { total, open, merged, avgLatency, mergeRate }
@@ -42,8 +48,8 @@ export default function PullRequestsPage() {
       const matchState = selectedState === 'all' || pr.state === selectedState
       const matchRepo = selectedRepo === 'all' || pr.repositoryId === selectedRepo
       const matchSearch =
-        pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pr.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (pr.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         String(pr.number).includes(searchQuery)
       return matchState && matchRepo && matchSearch
     })
@@ -146,7 +152,7 @@ export default function PullRequestsPage() {
             className="px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="all">All Repositories</option>
-            {mockRepositories.map((r) => (
+            {repositories.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
@@ -196,7 +202,9 @@ export default function PullRequestsPage() {
                       >
                         {pr.title}
                       </a>
-                      <span className="text-xs text-muted-foreground font-mono">#{pr.number}</span>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {repositories.find(r => r.id === pr.repositoryId)?.name || 'repo'}#{pr.number}
+                      </span>
                       {pr.isDraft && (
                         <span className="px-2 py-0.2 rounded text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
                           Draft

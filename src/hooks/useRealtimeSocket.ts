@@ -41,8 +41,16 @@ export function useRealtimeSocket() {
         });
 
       // Listen for new live activities (pushes, PRs, workflow runs)
-      socket.on('activity:new', (event: ActivityEvent) => {
-        addLiveEvent(event);
+      socket.on('activity:new', (event: any) => {
+        const mappedEvent = {
+          ...event,
+          actor: {
+            login: event.actorLogin,
+            name: event.actorName || event.actorLogin,
+            avatarUrl: event.actorAvatarUrl,
+          },
+        };
+        addLiveEvent(mappedEvent as ActivityEvent);
         addNotification({
           id: `notif-${Date.now()}`,
           severity: 'info',
@@ -94,6 +102,7 @@ export function useRealtimeSocket() {
           read: false,
           repositoryName: alert.repository,
         });
+      });
       }
     } catch (e) {
       console.warn('[Socket] Socket initialization error (falling back to offline):', e);

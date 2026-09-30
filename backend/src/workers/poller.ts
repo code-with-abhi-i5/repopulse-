@@ -71,6 +71,24 @@ async function pollAllRepositories() {
 
         if (latestCommits.length > 0) {
           const topCommit = latestCommits[0];
+
+          // Fetch detailed commit to get stats (lines added/deleted)
+          let linesAdded = 0;
+          let linesDeleted = 0;
+          try {
+            const { data: detailedCommit } = await octokit.rest.repos.getCommit({
+              owner,
+              repo: name,
+              ref: topCommit.sha,
+            });
+            if (detailedCommit.stats) {
+              linesAdded = detailedCommit.stats.additions || 0;
+              linesDeleted = detailedCommit.stats.deletions || 0;
+            }
+          } catch (e) {
+            // Ignore if commit stats fetch fails
+          }
+
           const authorLogin = topCommit.author?.login || topCommit.commit.author?.name || 'contributor';
 
           // Update repository pushedAt
@@ -100,6 +118,8 @@ async function pollAllRepositories() {
               url: topCommit.html_url,
               branch: ghRepo.default_branch,
               commitSha: topCommit.sha.slice(0, 7),
+              linesAdded,
+              linesDeleted,
             },
           });
 

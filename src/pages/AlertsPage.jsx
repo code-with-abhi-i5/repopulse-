@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { mockAlertRules, mockAlerts, mockRepositories } from '../data/mock'
+import { useState, useEffect } from 'react'
+import { api } from '../lib/api'
 import { formatRelativeTime } from '../lib/utils'
 import { useNotificationStore } from '../stores'
 import {
@@ -35,16 +35,22 @@ const severityBadgeColors = {
 
 export default function AlertsPage() {
   const { addNotification } = useNotificationStore()
-  const [alertRules, setAlertRules] = useState(mockAlertRules)
-  const [incidents, setIncidents] = useState(mockAlerts)
+  const [alertRules, setAlertRules] = useState([])
+  const [incidents, setIncidents] = useState([])
+  const [repositories, setRepositories] = useState([])
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false)
   const [testSent, setTestSent] = useState(false)
+
+  useEffect(() => {
+    api.getAlerts().then((data) => setIncidents(data || [])).catch(() => setIncidents([]))
+    api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
+  }, [])
 
   // New rule form state
   const [newRule, setNewRule] = useState({
     name: '',
     event: 'workflow_failure',
-    repositoryId: mockRepositories[0].id,
+    repositoryId: '',
     channel: 'discord',
     severity: 'critical',
     throttleMinutes: 15,
@@ -67,7 +73,7 @@ export default function AlertsPage() {
   // Create rule
   const handleCreateRule = (e) => {
     e.preventDefault()
-    const targetRepo = mockRepositories.find((r) => r.id === newRule.repositoryId)
+    const targetRepo = repositories.find((r) => r.id === newRule.repositoryId)
     const rule = {
       id: `alert-rule-${Date.now()}`,
       name: newRule.name || 'Custom Alert Rule',
@@ -90,7 +96,7 @@ export default function AlertsPage() {
     setNewRule({
       name: '',
       event: 'workflow_failure',
-      repositoryId: mockRepositories[0].id,
+      repositoryId: repositories[0]?.id || '',
       channel: 'discord',
       severity: 'critical',
       throttleMinutes: 15,
@@ -174,7 +180,12 @@ export default function AlertsPage() {
         </div>
 
         <div className="divide-y divide-border/60">
-          {alertRules.map((rule) => {
+          {alertRules.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              No alert rules defined yet. Click "Add Alert Rule" to create automated triggers.
+            </div>
+          ) : (
+            alertRules.map((rule) => {
             const isActive = rule.state === 'active'
             return (
               <div
@@ -229,7 +240,7 @@ export default function AlertsPage() {
                 </div>
               </div>
             )
-          })}
+          }))}
         </div>
       </div>
 
@@ -241,7 +252,12 @@ export default function AlertsPage() {
         </h3>
 
         <div className="divide-y divide-border/60">
-          {incidents.map((inc) => (
+          {incidents.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              No recent alert incidents recorded.
+            </div>
+          ) : (
+            incidents.map((inc) => (
             <div key={inc.id} className="py-3.5 flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div
@@ -273,7 +289,7 @@ export default function AlertsPage() {
                 {formatRelativeTime(inc.createdAt)}
               </span>
             </div>
-          ))}
+          )))}
         </div>
       </div>
 
@@ -330,7 +346,8 @@ export default function AlertsPage() {
                     onChange={(e) => setNewRule({ ...newRule, repositoryId: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-lg bg-background border border-border text-foreground"
                   >
-                    {mockRepositories.map((r) => (
+                    <option value="">Select a repository</option>
+                    {repositories.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.fullName}
                       </option>
