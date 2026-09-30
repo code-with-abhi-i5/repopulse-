@@ -1,0 +1,500 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// USER & ORGANIZER
+// -------------------------------------------------------------
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  TEAM_LEAD
+  DEVELOPER
+  JUDGE
+}
+
+model User {
+  id           String    @id @default(uuid())
+  githubId     Int?      @unique
+  login        String    @unique
+  name         String?
+  email        String?   @unique
+  avatarUrl    String?
+  role         UserRole  @default(DEVELOPER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  teams        TeamMember[]
+  alertRules   AlertRule[]
+  reports      Report[]
+}
+
+// -------------------------------------------------------------
+// HACKATHON TEAMS & ORGANIZATIONS
+// -------------------------------------------------------------
+model Team {
+  id              String       @id @default(uuid())
+  name            String
+  hackathonBatch  String?      // e.g. "HackQubit-2026"
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  members         TeamMember[]
+  repositories    Repository[]
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+// -------------------------------------------------------------
+// REPOSITORIES
+// -------------------------------------------------------------
+enum RepoVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum AntiCheatStatus {
+  VERIFIED_FRESH
+  PRE_EXISTING_FLAG
+  AUDIT_PENDING
+}
+
+model Repository {
+  id              String          @id @default(uuid())
+  githubId        BigInt          @unique
+  name            String
+  fullName        String          @unique // e.g. "Zectral/the-grocery-hub"
+  owner           String
+  description     String?         @db.Text
+  visibility      RepoVisibility  @default(PUBLIC)
+  defaultBranch   String          @default("main")
+  license         String?
+  language        String?
+  createdAt       DateTime        // Created at on GitHub
+  updatedAt       DateTime        // Updated at on GitHub
+  pushedAt        DateTime        // Last push on GitHub
+  stars           Int             @default(0)
+  forks           Int             @default(0)
+  watchers        Int             @default(0)
+  openIssues      Int             @default(0)
+  sizeKb          Int             @default(0)
+  archived        Boolean         @default(false)
+  topics          String[]        @default([])
+  healthScore     Float           @default(100.0)
+  
+  // Hackathon & Anti-Cheat Meta
+  teamId          String?
+  teamName        String?
+  hackathonBatch  String?
+  antiCheatStatus AntiCheatStatus @default(AUDIT_PENDING)
+  webhookActive   Boolean         @default(false)
+  
+  team            Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  snapshots       RepositorySnapshot[]
+  commits         Commit[]
+  pullRequests    PullRequest[]
+  issues          Issue[]
+  activities      ActivityEvent[]
+  alertRules      AlertRule[]
+  alerts          Alert[]
+  workflows       WorkflowRun[]
+  securityAlerts  SecurityAlert[]
+  auditLogs       AntiCheatAuditLog[]
+
+  createdAtSystem DateTime        @default(now())
+  updatedAtSystem DateTime        @updatedAt
+
+  @@index([owner])
+  @@index([language])
+  @@index([antiCheatStatus])
+  @@index([teamId])
+}
+
+// -------------------------------------------------------------
+// REPOSITORY DAILY SNAPSHOTS (Analytics)
+// -------------------------------------------------------------
+model RepositorySnapshot {
+  id           String     @id @default(uuid())
+  repositoryId String
+  date         DateTime   @db.Date
+  commits      Int        @default(0)
+  additions    Int        @default(0)
+  deletions    Int        @default(0)
+  stars        Int        @default(0)
+  forks        Int        @default(0)
+  watchers     Int        @default(0)
+  openIssues   Int        @default(0)
+  contributors Int        @default(0)
+  healthScore  Float      @default(0.0)
+
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, date])
+  @@index([date])
+}
+
+// -------------------------------------------------------------
+// CONTRIBUTORS & STATS
+// -------------------------------------------------------------
+model Contributor {
+  id             String    @id @default(uuid())
+  login          String    @unique
+  name           String?
+  avatarUrl      String?
+  totalCommits   Int       @default(0)
+  pushesCount    Int       @default(0)
+  teamName       String?
+  primaryRepo    String?
+  additions      Int       @default(0)
+  deletions      Int       @default(0)
+  activeDays     Int       @default(0)
+  firstCommitAt  DateTime?
+  lastCommitAt   DateTime?
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  isBot          Boolean   @default(false)
+  repositories   String[]  @default([])
+
+  commits        Commit[]
+  pullRequests   PullRequest[]
+  issues         Issue[]
+  activities     ActivityEvent[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([login])
+}
+
+// -------------------------------------------------------------
+// COMMITS & DIFF METRICS
+// -------------------------------------------------------------
+model Commit {
+  id           String      @id @default(uuid())
+  sha          String      @unique
+  message      String      @db.Text
+  authorLogin  String
+  branch       String      @default("main")
+  repositoryId String
+  timestamp    DateTime
+  additions    Int         @default(0)
+  deletions    Int         @default(0)
+  filesChanged Int         @default(0)
+  url          String
+  isBulkDump   Boolean     @default(false) // Anti-Cheat Flag
+
+  repository   Repository  @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  author       Contributor @relation(fields: [authorLogin], references: [login])
+  files        CommitFile[]
+
+  @@index([repositoryId, timestamp])
+  @@index([authorLogin])
+}
+
+model CommitFile {
+  id        String   @id @default(uuid())
+  commitId  String
+  filename  String
+  status    String
+  additions Int      @default(0)
+  deletions Int      @default(0)
+
+  commit    Commit   @relation(fields: [commitId], references: [id], onDelete: Cascade)
+
+  @@index([commitId])
+}
+
+// -------------------------------------------------------------
+// PULL REQUESTS
+// -------------------------------------------------------------
+enum PRState {
+  OPEN
+  MERGED
+  CLOSED
+}
+
+model PullRequest {
+  id                 String     @id @default(uuid())
+  number             Int
+  title              String
+  state              PRState    @default(OPEN)
+  authorLogin        String
+  repositoryId       String
+  createdAt          DateTime
+  updatedAt          DateTime
+  mergedAt           DateTime?
+  closedAt           DateTime?
+  additions          Int        @default(0)
+  deletions          Int        @default(0)
+  filesChanged       Int        @default(0)
+  reviewLatencyHours Float?
+  mergeTimeHours     Float?
+  isDraft            Boolean    @default(false)
+  url                String
+  labels             Json       @default("[]")
+  reviewers          Json       @default("[]")
+
+  repository         Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  author             Contributor @relation(fields: [authorLogin], references: [login])
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId, state])
+}
+
+// -------------------------------------------------------------
+// ISSUES
+// -------------------------------------------------------------
+enum IssueState {
+  OPEN
+  CLOSED
+}
+
+model Issue {
+  id                 String     @id @default(uuid())
+  number             Int
+  title              String
+  state              IssueState @default(OPEN)
+  authorLogin        String
+  repositoryId       String
+  createdAt          DateTime
+  updatedAt          DateTime
+  closedAt           DateTime?
+  firstResponseAt    DateTime?
+  firstResponseHours Float?
+  isStale            Boolean    @default(false)
+  url                String
+  labels             Json       @default("[]")
+
+  repository         Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  author             Contributor @relation(fields: [authorLogin], references: [login])
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId, state])
+}
+
+// -------------------------------------------------------------
+// REAL-TIME ACTIVITY EVENTS
+// -------------------------------------------------------------
+enum ActivityEventType {
+  PUSH
+  PULL_REQUEST
+  ISSUES
+  RELEASE
+  WORKFLOW_RUN
+  STAR
+  FORK
+  FORCE_PUSH
+}
+
+model ActivityEvent {
+  id             String            @id @default(uuid())
+  type           ActivityEventType
+  repositoryId   String
+  repositoryName String
+  teamName       String?
+  actorLogin     String
+  actorName      String?
+  actorAvatarUrl String?
+  timestamp      DateTime          @default(now())
+  title          String
+  description    String?           @db.Text
+  url            String?
+  branch         String?
+  linesAdded     Int?              @default(0)
+  linesDeleted   Int?              @default(0)
+  commitCount    Int?              @default(0)
+  commitSha      String?
+
+  repository     Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  actor          Contributor       @relation(fields: [actorLogin], references: [login])
+
+  @@index([repositoryId, timestamp(sort: Desc)])
+  @@index([type])
+}
+
+// -------------------------------------------------------------
+// ALERTS & NOTIFICATIONS
+// -------------------------------------------------------------
+enum AlertSeverity {
+  CRITICAL
+  WARNING
+  INFO
+}
+
+enum AlertState {
+  ACTIVE
+  MUTED
+  TRIGGERED
+  FAILED
+}
+
+enum AlertChannel {
+  EMAIL
+  SLACK
+  DISCORD
+  TELEGRAM
+  WEBHOOK
+}
+
+model AlertRule {
+  id               String        @id @default(uuid())
+  userId           String?
+  name             String
+  event            String
+  condition        String
+  repositoryId     String
+  repositoryName   String
+  channel          AlertChannel
+  webhookUrl       String?
+  destination      String?
+  severity         AlertSeverity @default(WARNING)
+  state            AlertState    @default(ACTIVE)
+  throttleMinutes  Int           @default(15)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  lastTriggeredAt  DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  repository       Repository    @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  alerts           Alert[]
+
+  @@index([repositoryId, state])
+}
+
+model Alert {
+  id           String        @id @default(uuid())
+  ruleId       String?
+  repositoryId String
+  type         String
+  severity     AlertSeverity
+  repository   String
+  message      String        @db.Text
+  channel      AlertChannel
+  read         Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  rule         AlertRule?    @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  repoRelation Repository    @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, createdAt(sort: Desc)])
+  @@index([read])
+}
+
+// -------------------------------------------------------------
+// CI/CD WORKFLOW RUNS
+// -------------------------------------------------------------
+enum WorkflowStatus {
+  PASSING
+  FAILED
+  CANCELLED
+  RUNNING
+}
+
+model WorkflowRun {
+  id           String         @id @default(uuid())
+  runId        BigInt         @unique
+  name         String
+  repositoryId String
+  status       WorkflowStatus
+  branch       String
+  sha          String
+  duration     Int            @default(0)
+  createdAt    DateTime
+  url          String
+
+  repository   Repository     @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, status])
+}
+
+// -------------------------------------------------------------
+// SECURITY ALERTS
+// -------------------------------------------------------------
+enum SecuritySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SecurityCategory {
+  DEPENDABOT
+  CODE_SCANNING
+  SECRET_SCANNING
+}
+
+model SecurityAlert {
+  id           String           @id @default(uuid())
+  alertId      BigInt           @unique
+  severity     SecuritySeverity
+  category     SecurityCategory
+  title        String
+  repositoryId String
+  createdAt    DateTime
+  url          String
+
+  repository   Repository       @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, severity])
+}
+
+// -------------------------------------------------------------
+// ANTI-CHEAT & CODE AUDIT LOGS
+// -------------------------------------------------------------
+model AntiCheatAuditLog {
+  id               String          @id @default(uuid())
+  repositoryId     String
+  evaluatedStatus  AntiCheatStatus
+  hackathonStart   DateTime
+  firstCommitDate  DateTime
+  flaggedCommits   Json            @default("[]")
+  aiSuspicionScore Float           @default(0.0)
+  reasonSummary    String          @db.Text
+  auditedAt        DateTime        @default(now())
+
+  repository       Repository      @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId, evaluatedStatus])
+}
+
+// -------------------------------------------------------------
+// EXECUTIVE REPORTS
+// -------------------------------------------------------------
+model Report {
+  id             String    @id @default(uuid())
+  userId         String?
+  title          String
+  period         String
+  health         Float
+  healthChange   Float
+  commits        Int
+  prsMerged      Int
+  issuesClosed   Int
+  topContributor String
+  repositories   Int
+  aiSummaryMarkdown String? @db.Text
+  generatedAt    DateTime  @default(now())
+
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([generatedAt(sort: Desc)])
+}

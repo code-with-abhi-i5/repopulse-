@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useUIStore, useDemoStore, useNotificationStore, useRealtimeStore } from './stores'
 import { mockNotifications, mockActivityEvents } from './data/mock'
+import { useRealtimeSocket } from './hooks/useRealtimeSocket'
 import LandingPage from './pages/LandingPage.jsx'
 import DashboardLayout from './components/layout/DashboardLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
@@ -45,7 +46,12 @@ function ThemeManager() {
     }
   }, [theme])
 
-  return null
+  return null;
+}
+
+function RealtimeManager() {
+  useRealtimeSocket();
+  return null;
 }
 
 export default function App() {
@@ -53,6 +59,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeManager />
       <DemoInitializer />
+      <RealtimeManager />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route element={<DashboardLayout />}>
