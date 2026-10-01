@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useRealtimeStore, useNotificationStore, useRepositoryStore } from '../stores';
+import { api } from '../lib/api';
 import type { ActivityEvent } from '../types';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://repopulse-api-v5tc.onrender.com' : 'http://localhost:5000');
@@ -21,9 +22,11 @@ export function useRealtimeSocket() {
       if (!socket) {
         socket = io(SOCKET_URL, {
           transports: ['websocket', 'polling'],
-          reconnectionAttempts: 3,
-          reconnectionDelay: 3000,
-          timeout: 4000,
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          timeout: 20000,
         });
 
         socket.on('connect', () => {
@@ -111,8 +114,36 @@ export function useRealtimeSocket() {
       console.warn('[Socket] Socket initialization error (falling back to offline):', e);
     }
 
+    // Background auto-sync poller: keeps liveEvents fresh across the fleet even without socket
+    const poller = setInterval(async () => {
+      try {
+        const freshActivities = await api.getActivities(true);
+        if (Array.isArray(freshActivities) && freshActivities.length > 0) {
+          const { liveEvents, setLiveEvents } = useRealtimeStore.getState();
+          const map = new Map<string, ActivityEvent>();
+          freshActivities.forEach((e) => {
+            if (e && e.id) map.set(e.id, e);
+          });
+          liveEvents.forEach((e) => {
+            if (e && e.id && !map.has(e.id)) {
+              map.set(e.id, e);
+            }
+          });
+          const merged = Array.from(map.values())
+            .sort((a, b) => new Date(b.timestamp || (b as any).createdAt).getTime() - new Date(a.timestamp || (a as any).createdAt).getTime())
+            .slice(0, 100);
+
+          if (merged.length !== liveEvents.length || merged[0]?.id !== liveEvents[0]?.id) {
+            setLiveEvents(merged);
+          }
+        }
+      } catch (err) {
+        // quiet background poller
+      }
+    }, 8000);
+
     return () => {
-      // Keep persistent across page navigation
+      clearInterval(poller);
     };
   }, [setConnectionStatus, addLiveEvent, addNotification]);
 }

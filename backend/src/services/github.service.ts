@@ -187,7 +187,42 @@ export async function syncRepository(
           filesChanged,
         },
       });
-      
+
+      // Upsert ActivityEvent so Live Activity stream receives this commit in real time
+      const shortSha = c.sha.slice(0, 7);
+      const existingActivity = await prisma.activityEvent.findFirst({
+        where: {
+          repositoryId: repo.id,
+          commitSha: shortSha,
+        },
+      });
+
+      if (!existingActivity) {
+        const cleanTitle = (c.commit.message || '').split('\n')[0].trim() || `Commit pushed to ${repo.name}`;
+        const newActivity = await prisma.activityEvent.create({
+          data: {
+            type: 'PUSH',
+            repositoryId: repo.id,
+            repositoryName: repo.name,
+            teamName: repo.teamName,
+            actorLogin: authorLogin,
+            actorName: c.commit.author?.name || authorLogin,
+            actorAvatarUrl: c.author?.avatar_url || `https://github.com/${authorLogin}.png`,
+            timestamp: new Date(c.commit.author?.date || Date.now()),
+            title: cleanTitle,
+            description: c.commit.message,
+            url: c.html_url,
+            branch: repoData.default_branch,
+            commitSha: shortSha,
+            linesAdded: additions,
+            linesDeleted: deletions,
+            commitCount: 1,
+          },
+        });
+
+        // Broadcast to all connected clients over WebSocket in real time
+        broadcastActivityEvent(newActivity);
+      }
       // Update the contributor's overall additions/deletions, commits count, and repository affiliations
       if (authorLogin !== 'unknown') {
         const stats = await prisma.commit.aggregate({
@@ -366,6 +401,7 @@ export async function syncRepository(
   try {
     await cacheService.invalidateRepository(repo.id, fullName);
     await cacheService.invalidateContributors();
+    await cacheService.invalidateActivities();
   } catch (cErr: any) {
     console.warn(`⚠️ [GitHub Sync] Cache invalidation notice: ${cErr.message}`);
   }

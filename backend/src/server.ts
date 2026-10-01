@@ -81,9 +81,9 @@ async function startServer() {
   // Initialize Background Workers
   initializeWorkers();
 
-  // Start Automated Background Poller if DB is online (every 45s to prevent Supavisor idle disconnect)
+  // Start Automated Background Poller if DB is online (every 20s for snappy live stream updates)
   if (isDbConnected) {
-    startBackgroundPoller(45);
+    startBackgroundPoller(20);
   }
 
   // Start HTTP & WebSocket Server

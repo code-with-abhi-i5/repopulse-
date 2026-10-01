@@ -28,6 +28,7 @@ import {
   Code2,
   Layers,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react'
 
 const eventTypeIcons = {
@@ -40,8 +41,27 @@ const eventTypeIcons = {
   fork: { icon: GitFork, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', label: 'Fork' },
 }
 
+function mergeEvents(incoming, current) {
+  const map = new Map()
+  if (Array.isArray(incoming)) {
+    incoming.forEach((item) => {
+      if (item && item.id) map.set(item.id, item)
+    })
+  }
+  if (Array.isArray(current)) {
+    current.forEach((item) => {
+      if (item && item.id && !map.has(item.id)) {
+        map.set(item.id, item)
+      }
+    })
+  }
+  return Array.from(map.values())
+    .sort((a, b) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime())
+    .slice(0, 150)
+}
+
 export default function ActivityPage() {
-  const { liveEvents, isConnected, addLiveEvent } = useRealtimeStore()
+  const { liveEvents, connectionStatus, setLiveEvents } = useRealtimeStore()
   const [events, setEvents] = useState([])
   const [repositories, setRepositories] = useState([])
   const [selectedType, setSelectedType] = useState('all')
@@ -49,11 +69,46 @@ export default function ActivityPage() {
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isLivePaused, setIsLivePaused] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState(Date.now())
 
+  const syncFreshActivities = async (manual = false) => {
+    if (manual) setIsRefreshing(true)
+    try {
+      const data = await api.getActivities(true)
+      if (Array.isArray(data) && data.length > 0) {
+        setEvents((prev) => mergeEvents(data, prev))
+        setLiveEvents(data)
+        setLastSyncTime(Date.now())
+      }
+    } catch (err) {
+      console.warn('[ActivityPage] Live sync notice:', err)
+    } finally {
+      if (manual) setTimeout(() => setIsRefreshing(false), 500)
+    }
+  }
+
+  // Initial fetch and continuous auto-poll (every 5 seconds) without manual page reload
   useEffect(() => {
-    api.getActivities().then((data) => setEvents(data || [])).catch(() => setEvents([]))
+    syncFreshActivities()
     api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
-  }, [])
+
+    if (isLivePaused) return
+
+    const interval = setInterval(() => {
+      syncFreshActivities()
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [isLivePaused])
+
+  // Merge live events from WebSockets whenever new live events arrive
+  useEffect(() => {
+    if (liveEvents.length > 0 && !isLivePaused) {
+      setEvents((prev) => mergeEvents(liveEvents, prev))
+      setLastSyncTime(Date.now())
+    }
+  }, [liveEvents, isLivePaused])
 
   // Unique teams from repos and events
   const uniqueTeams = useMemo(() => {
@@ -62,17 +117,6 @@ export default function ActivityPage() {
     events.forEach((e) => e.teamName && teams.add(e.teamName))
     return ['all', ...Array.from(teams)]
   }, [events, repositories])
-
-  // Merge live events into event list
-  useEffect(() => {
-    if (liveEvents.length > 0 && !isLivePaused) {
-      setEvents((prev) => {
-        const existingIds = new Set(prev.map(e => e.id))
-        const newOnes = liveEvents.filter(e => !existingIds.has(e.id))
-        return [...newOnes, ...prev].slice(0, 100)
-      })
-    }
-  }, [liveEvents, isLivePaused])
 
   // Real-time telemetry summary metrics
   const telemetryStats = useMemo(() => {
@@ -122,9 +166,9 @@ export default function ActivityPage() {
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5 flex-wrap">
             <Activity className="w-7 h-7 text-indigo-400" />
             Live Activity & Telemetry Stream
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Live Telemetry Active
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className={`w-2 h-2 rounded-full ${isLivePaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+              {isLivePaused ? 'Stream Paused' : 'Live Real-Time Active (5s)'}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -134,6 +178,18 @@ export default function ActivityPage() {
 
         {/* Live Controls */}
         <div className="flex items-center gap-2">
+          {/* Instant Sync Button */}
+          <button
+            onClick={() => syncFreshActivities(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-200 border border-white/10 hover:bg-slate-800 hover:text-white transition-all disabled:opacity-60 shadow-sm"
+            title="Instant Live Telemetry Sync"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Syncing...' : 'Sync Stream'}</span>
+          </button>
+
+          {/* Pause / Resume Button */}
           <button
             onClick={() => setIsLivePaused((prev) => !prev)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${

@@ -179,8 +179,8 @@ export const api = {
   },
 
   // Activities
-  async getActivities(): Promise<ActivityEvent[]> {
-    const data = await safeFetch<any[]>('/activities', { method: 'GET' }, []);
+  async getActivities(fresh: boolean = false): Promise<ActivityEvent[]> {
+    const data = await safeFetch<any[]>(`/activities${fresh ? '?fresh=true' : ''}`, { method: 'GET' }, []);
     return data.map((evt: any) => {
       let cleanTitle = evt.title || evt.description || 'Activity recorded';
       if (cleanTitle.startsWith('New push to ')) {

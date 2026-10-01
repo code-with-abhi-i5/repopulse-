@@ -50,11 +50,19 @@ export default function DashboardPage() {
   useEffect(() => {
     api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))
     api.getContributors().then((data) => setContributors(data || [])).catch(() => setContributors([]))
-    api.getActivities().then((data) => {
-      if (data && data.length > 0) {
-        setLiveEvents(data)
-      }
-    }).catch(() => {})
+    
+    const fetchFreshTelemetry = () => {
+      api.getActivities(true).then((data) => {
+        if (data && data.length > 0) {
+          setLiveEvents(data)
+        }
+      }).catch(() => {})
+    }
+
+    fetchFreshTelemetry()
+    const interval = setInterval(fetchFreshTelemetry, 6000)
+
+    return () => clearInterval(interval)
   }, [setLiveEvents])
 
   // Simulated live event injector (only active if demo mode is explicitly enabled AND no real events exist)
