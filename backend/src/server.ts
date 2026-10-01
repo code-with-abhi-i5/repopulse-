@@ -34,9 +34,9 @@ initSocketServer(server);
 app.use('/api/v1', apiRouter);
 
 // Root and Health routes
-app.get('/health', (req, res) => res.redirect('/api/v1/health'));
+app.get('/health', (req: express.Request, res: express.Response) => res.redirect('/api/v1/health'));
 
-app.get('/', (req, res) => {
+app.get('/', (req: express.Request, res: express.Response) => {
   res.json({
     name: 'RepoPulse API Engine',
     version: '1.0.0',
@@ -47,7 +47,7 @@ app.get('/', (req, res) => {
 });
 
 // 4. 404 Handler
-app.use((req, res) => {
+app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ error: `Route not found: ${req.method} ${req.url}` });
 });
 

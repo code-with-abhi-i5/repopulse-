@@ -24,6 +24,10 @@
     "@octokit/graphql": "^8.2.1",
     "@octokit/rest": "^21.1.1",
     "@prisma/client": "^6.4.1",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.10",
     "@upstash/redis": "^1.39.0",
     "axios": "^1.8.2",
     "cors": "^2.8.5",
@@ -32,16 +36,12 @@
     "ioredis": "^5.6.0",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1",
+    "typescript": "^5.8.2",
     "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/multer": "^1.4.12",
-    "@types/node": "^22.13.10",
     "prisma": "^6.4.1",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "tsx": "^4.19.3"
   }
 }

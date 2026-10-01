@@ -2,7 +2,7 @@
 // RepoPulse — Main API Router
 // ============================================================
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import {
   getRepositories,
@@ -45,7 +45,7 @@ import { checkRedisHealth } from '../services/cache/cache.service.js';
 // -------------------------------------------------------------
 // Health Check & Infrastructure Observability
 // -------------------------------------------------------------
-apiRouter.get('/health', async (req, res) => {
+apiRouter.get('/health', async (req: Request, res: Response) => {
   const redisHealth = await checkRedisHealth();
   res.json({
     status: 'online',
