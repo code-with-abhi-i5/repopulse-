@@ -49,27 +49,39 @@ export const api = {
     );
   },
 
-  async getRepositoryById(id: string): Promise<Repository | null> {
+  async getRepositoryById(id: string, fresh: boolean = false): Promise<Repository | null> {
     const encodedId = encodeURIComponent(id);
-    const repo = await safeFetch<any>(`/repositories/${encodedId}`, { method: 'GET' }, null);
+    const repo = await safeFetch<any>(`/repositories/${encodedId}${fresh ? '?fresh=true' : ''}`, { method: 'GET' }, null);
     
     if (repo) {
-      if (repo.commits) {
+      if (repo.commits && Array.isArray(repo.commits)) {
         repo.commits = repo.commits.map((c: any) => ({
           ...c,
-          author: { name: c.authorLogin, avatarUrl: `https://github.com/${c.authorLogin}.png` }
+          authorLogin: c.authorLogin || c.author?.login || 'unknown',
+          author: {
+            name: c.authorLogin || c.author?.name || 'Developer',
+            avatarUrl: `https://github.com/${c.authorLogin || 'ghost'}.png`,
+          },
         }));
       }
-      if (repo.pullRequests) {
+      if (repo.pullRequests && Array.isArray(repo.pullRequests)) {
         repo.pullRequests = repo.pullRequests.map((pr: any) => ({
           ...pr,
-          author: { name: pr.authorLogin, avatarUrl: `https://github.com/${pr.authorLogin}.png` }
+          authorLogin: pr.authorLogin || pr.author?.login || 'unknown',
+          author: {
+            name: pr.authorLogin || pr.author?.name || 'Developer',
+            avatarUrl: `https://github.com/${pr.authorLogin || 'ghost'}.png`,
+          },
         }));
       }
-      if (repo.issues) {
+      if (repo.issues && Array.isArray(repo.issues)) {
         repo.issues = repo.issues.map((issue: any) => ({
           ...issue,
-          author: { name: issue.authorLogin, avatarUrl: `https://github.com/${issue.authorLogin}.png` }
+          authorLogin: issue.authorLogin || issue.author?.login || 'unknown',
+          author: {
+            name: issue.authorLogin || issue.author?.name || 'Developer',
+            avatarUrl: `https://github.com/${issue.authorLogin || 'ghost'}.png`,
+          },
         }));
       }
     }
@@ -203,8 +215,8 @@ export const api = {
     })) as Contributor[];
   },
 
-  async getContributorByLogin(login: string): Promise<any> {
-    return safeFetch<any>(`/contributors/${login}`, { method: 'GET' }, null);
+  async getContributorByLogin(login: string, fresh: boolean = false): Promise<any> {
+    return safeFetch<any>(`/contributors/${encodeURIComponent(login)}${fresh ? '?fresh=true' : ''}`, { method: 'GET' }, null);
   },
 
   // Pull Requests & Issues

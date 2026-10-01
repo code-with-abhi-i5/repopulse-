@@ -13,10 +13,10 @@ class GitHubTokenPool {
   }
 
   public refreshTokens() {
-    const raw = ENV.GITHUB_TOKEN_POOL || process.env.GITHUB_TOKEN || '';
+    const raw = ENV.GITHUB_TOKEN_POOL || process.env.GITHUB_TOKEN_POOL || process.env.GITHUB_TOKEN || '';
     this.tokens = raw
       .split(',')
-      .map((t) => t.trim())
+      .map((t) => t.replace(/['"]/g, '').trim())
       .filter((t) => t.length > 0);
 
     if (this.tokens.length > 0) {

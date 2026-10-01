@@ -21,6 +21,7 @@ import {
   TrendingUp,
   GitPullRequest,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 
 export default function ContributorsPage() {
@@ -89,6 +90,45 @@ export default function ContributorsPage() {
   const [contributorCommits, setContributorCommits] = useState([])
   const [contributorPRs, setContributorPRs] = useState([])
   const [contributorIssues, setContributorIssues] = useState([])
+  const [isSyncingContributor, setIsSyncingContributor] = useState(false)
+
+  const loadContributorDetails = async (login, fresh = true) => {
+    setIsSyncingContributor(true)
+    try {
+      const data = await api.getContributorByLogin(login, fresh)
+      if (data) {
+        setContributorCommits(data.commits || [])
+        setContributorPRs(data.pullRequests || [])
+        setContributorIssues(data.issues || [])
+      } else {
+        setContributorCommits([])
+        setContributorPRs([])
+        setContributorIssues([])
+      }
+    } catch {
+      setContributorCommits([])
+      setContributorPRs([])
+      setContributorIssues([])
+    } finally {
+      setIsSyncingContributor(false)
+    }
+  }
+
+  const handleSyncContributor = async () => {
+    if (!selectedContributor) return
+    setIsSyncingContributor(true)
+    try {
+      const repoToSync = selectedContributor.primaryRepo || 'code-with-abhi-i5/repopulse-'
+      await api.syncRepository(repoToSync)
+      await loadContributorDetails(selectedContributor.login, true)
+      const updatedList = await api.getContributors()
+      setContributors(updatedList || [])
+    } catch (err) {
+      console.error('Failed to sync contributor:', err)
+    } finally {
+      setIsSyncingContributor(false)
+    }
+  }
 
   useEffect(() => {
     if (!selectedContributor) {
@@ -97,29 +137,7 @@ export default function ContributorsPage() {
       setContributorIssues([])
       return
     }
-    if (selectedContributor.commitsList && selectedContributor.commitsList.length > 0) {
-      setContributorCommits(selectedContributor.commitsList)
-      setContributorPRs([])
-      setContributorIssues([])
-      return
-    }
-    api.getContributorByLogin(selectedContributor.login)
-      .then((data) => {
-        if (data) {
-          setContributorCommits(data.commits || [])
-          setContributorPRs(data.pullRequests || [])
-          setContributorIssues(data.issues || [])
-        } else {
-          setContributorCommits([])
-          setContributorPRs([])
-          setContributorIssues([])
-        }
-      })
-      .catch(() => {
-        setContributorCommits([])
-        setContributorPRs([])
-        setContributorIssues([])
-      })
+    loadContributorDetails(selectedContributor.login, true)
   }, [selectedContributor])
 
   return (
@@ -492,12 +510,23 @@ export default function ContributorsPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setSelectedContributor(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSyncContributor}
+                  disabled={isSyncingContributor}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all flex items-center gap-1.5"
+                  title="Fetch latest commits from GitHub"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingContributor ? 'animate-spin text-indigo-400' : ''}`} />
+                  {isSyncingContributor ? 'Syncing...' : 'Sync Live'}
+                </button>
+                <button
+                  onClick={() => setSelectedContributor(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Quick Metrics */}
@@ -511,7 +540,7 @@ export default function ContributorsPage() {
               <div className="p-3.5 rounded-xl bg-slate-900/60 border border-white/[0.08]">
                 <span className="text-slate-400 text-xs block">Commits</span>
                 <span className="text-lg font-bold text-white font-mono mt-0.5 block">
-                  {selectedContributor.commits}
+                  {contributorCommits.length > 0 ? contributorCommits.length : selectedContributor.commits}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-900/60 border border-white/[0.08]">
@@ -568,19 +597,29 @@ export default function ContributorsPage() {
                     </div>
                   ) : (
                     contributorCommits.map((c) => (
-                      <div key={c.id} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
+                      <div key={c.id || c.sha} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
                         <div className="min-w-0 pr-4">
-                          <p className="font-semibold text-slate-200 truncate">{c.message}</p>
-                          <span className="text-slate-500 text-[11px]">
-                            {formatRelativeTime(c.timestamp)} • <span className="font-mono text-indigo-400">#{c.sha}</span>
+                          <a
+                            href={c.url || `https://github.com/${selectedContributor.primaryRepo || 'code-with-abhi-i5/repopulse-'}/commit/${c.sha}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block"
+                          >
+                            {c.message}
+                          </a>
+                          <span className="text-slate-500 text-[11px] flex items-center gap-1.5 mt-0.5">
+                            <span>{formatRelativeTime(c.timestamp)}</span>
+                            <span>•</span>
+                            <span className="font-mono text-indigo-400">#{c.sha?.slice(0, 7)}</span>
+                            {c.branch && <span className="font-mono text-slate-400">({c.branch})</span>}
                           </span>
                         </div>
                         <div className="font-mono shrink-0 text-xs flex items-center gap-1.5">
                           <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            +{c.additions}
+                            +{c.additions || 0}
                           </span>
                           <span className="px-2 py-0.5 rounded font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                            -{c.deletions}
+                            -{c.deletions || 0}
                           </span>
                         </div>
                       </div>

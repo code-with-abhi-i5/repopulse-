@@ -37,17 +37,24 @@ export async function getContributors(req: Request, res: Response) {
 export async function getContributorByLogin(req: Request, res: Response) {
   try {
     const login = String(req.params.login);
+    const fresh = req.query.fresh === 'true';
     const cacheKey = cacheKeys.contributorDetail(login);
+
+    if (fresh) {
+      await cacheService.delete(cacheKey);
+    }
 
     const contributor = await cacheService.getOrSet(
       cacheKey,
       async () => {
-        return prisma.contributor.findUnique({
-          where: { login },
+        return prisma.contributor.findFirst({
+          where: {
+            login: { equals: login, mode: 'insensitive' },
+          },
           include: {
-            commits: { take: 20, orderBy: { timestamp: 'desc' } },
-            pullRequests: { take: 10, orderBy: { createdAt: 'desc' } },
-            issues: { take: 10, orderBy: { createdAt: 'desc' } },
+            commits: { take: 50, orderBy: { timestamp: 'desc' } },
+            pullRequests: { take: 20, orderBy: { createdAt: 'desc' } },
+            issues: { take: 20, orderBy: { createdAt: 'desc' } },
           },
         });
       },

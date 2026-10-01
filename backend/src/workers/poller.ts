@@ -7,6 +7,7 @@ import { getOctokitClient } from '../lib/octokit.js';
 import { calculateHealthScore } from '../services/health.service.js';
 import { broadcastActivityEvent } from '../lib/socket.js';
 import { cacheService } from '../services/cache/cache.service.js';
+import { syncRepository } from '../services/github.service.js';
 
 let pollerInterval: NodeJS.Timeout | null = null;
 let isPolling = false;
@@ -84,81 +85,14 @@ async function pollAllRepositories() {
       const localPushedAt = new Date(repo.pushedAt);
 
       if (remotePushedAt.getTime() > localPushedAt.getTime()) {
-        console.log(`⚡ [Poller] New activity detected in ${repo.fullName}!`);
-
-        // Fetch latest commit
-        const { data: latestCommits } = await octokit.rest.repos.listCommits({
-          owner,
-          repo: name,
-          per_page: 3,
-        });
-
-        if (latestCommits.length > 0) {
-          const topCommit = latestCommits[0];
-
-          // Fetch detailed commit to get stats (lines added/deleted)
-          let linesAdded = 0;
-          let linesDeleted = 0;
-          try {
-            const { data: detailedCommit } = await octokit.rest.repos.getCommit({
-              owner,
-              repo: name,
-              ref: topCommit.sha,
-            });
-            if (detailedCommit.stats) {
-              linesAdded = detailedCommit.stats.additions || 0;
-              linesDeleted = detailedCommit.stats.deletions || 0;
-            }
-          } catch (e) {
-            // Ignore if commit stats fetch fails
-          }
-
-          const authorLogin = topCommit.author?.login || topCommit.commit.author?.name || 'contributor';
-
-          // Update repository pushedAt
-          await prisma.repository.update({
-            where: { id: repo.id },
-            data: {
-              pushedAt: remotePushedAt,
-              stars: ghRepo.stargazers_count,
-              forks: ghRepo.forks_count,
-              openIssues: ghRepo.open_issues_count,
-            },
+        console.log(`⚡ [Poller] New push activity detected in ${repo.fullName}! Triggering full sync...`);
+        try {
+          await syncRepository(repo.fullName, {
+            teamName: repo.teamName || undefined,
+            hackathonBatch: repo.hackathonBatch || undefined,
           });
-
-          // Create Activity Event
-          const cleanTitle = (topCommit.commit.message || '').split('\n')[0].trim() || `Commit pushed to ${repo.name}`;
-          const activity = await prisma.activityEvent.create({
-            data: {
-              type: 'PUSH',
-              repositoryId: repo.id,
-              repositoryName: repo.name,
-              teamName: repo.teamName,
-              actorLogin: authorLogin,
-              actorName: topCommit.commit.author?.name || authorLogin,
-              actorAvatarUrl: topCommit.author?.avatar_url || `https://github.com/${authorLogin}.png`,
-              timestamp: new Date(),
-              title: cleanTitle,
-              description: topCommit.commit.message,
-              url: topCommit.html_url,
-              branch: ghRepo.default_branch,
-              commitSha: topCommit.sha.slice(0, 7),
-              linesAdded,
-              linesDeleted,
-              commitCount: 1,
-            },
-          });
-
-          // Broadcast live activity to frontend via WebSocket
-          broadcastActivityEvent(activity);
-
-          // Recompute Health Score
-          await calculateHealthScore(repo.id);
-
-          // Targeted Cache Invalidation on New Activity
-          await cacheService.invalidateRepository(repo.id, repo.fullName);
-          await cacheService.invalidateActivities();
-          await cacheService.invalidateContributors(authorLogin);
+        } catch (syncErr: any) {
+          console.warn(`⚠️ [Poller] Sync failed for ${repo.fullName}:`, syncErr.message);
         }
       }
     } catch (err: any) {

@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
-
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
 
 export const ENV = {
   PORT: parseInt(process.env.PORT || '5000', 10),

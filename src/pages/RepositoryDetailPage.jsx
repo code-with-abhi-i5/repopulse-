@@ -44,7 +44,7 @@ export default function RepositoryDetailPage() {
     setLoading(true)
     const fullName = `${owner}/${repo}`
     Promise.all([
-      api.getRepositoryById(fullName),
+      api.getRepositoryById(fullName, true),
       api.getContributors(),
     ])
       .then(([found, contribs]) => {
@@ -147,8 +147,10 @@ export default function RepositoryDetailPage() {
     setIsSyncing(true)
     try {
       await api.syncRepository(`${owner}/${repo}`)
-      const refreshed = await api.getRepositoryById(`${owner}/${repo}`)
+      const refreshed = await api.getRepositoryById(`${owner}/${repo}`, true)
       if (refreshed) setRepoData(refreshed)
+      const contribs = await api.getContributors()
+      if (contribs) setAllContributors(contribs)
     } catch (err) {
       console.error(err)
     } finally {
@@ -416,45 +418,83 @@ export default function RepositoryDetailPage() {
             {/* Recent Commits preview */}
             <div className="p-5 rounded-2xl bg-card border border-border shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Code2 className="w-5 h-5 text-primary" />
-                  Latest Commit Stream
-                </h3>
-                <button
-                  onClick={() => setActiveTab('commits')}
-                  className="text-xs text-primary hover:underline font-medium"
-                >
-                  View all ({repoCommits.length})
-                </button>
+                  <h3 className="text-base font-bold text-foreground">
+                    Latest Commit Stream
+                  </h3>
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleManualSync}
+                    disabled={isSyncing}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/40 transition-colors"
+                    title="Sync latest commits from GitHub"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('commits')}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    View all ({repoCommits.length})
+                  </button>
+                </div>
               </div>
 
-              <div className="divide-y divide-border/60">
-                {repoCommits.slice(0, 5).map((commit) => (
-                  <div key={commit.id} className="py-3 flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <img
-                        src={commit.author.avatarUrl}
-                        alt={commit.author.name}
-                        className="w-7 h-7 rounded-full mt-0.5 border border-border"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground truncate">{commit.message}</p>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                          <span>{commit.author.name}</span>
-                          <span>•</span>
-                          <span>{formatRelativeTime(commit.timestamp)}</span>
-                          <span>•</span>
-                          <span className="font-mono text-primary font-medium">{commit.sha}</span>
+              {repoCommits.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+                  <p>No commits recorded yet for this repository.</p>
+                  <button
+                    onClick={handleManualSync}
+                    disabled={isSyncing}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    Sync Commits from GitHub
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {repoCommits.slice(0, 5).map((commit) => (
+                    <div key={commit.id || commit.sha} className="py-3 flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <img
+                          src={commit.author?.avatarUrl || `https://github.com/${commit.authorLogin || 'github'}.png`}
+                          alt={commit.author?.name || commit.authorLogin || 'Developer'}
+                          className="w-7 h-7 rounded-full mt-0.5 border border-border"
+                        />
+                        <div className="min-w-0">
+                          <a
+                            href={commit.url || `https://github.com/${owner}/${repo}/commit/${commit.sha}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-foreground truncate hover:text-primary transition-colors block"
+                          >
+                            {commit.message}
+                          </a>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                            <span>{commit.author?.name || commit.authorLogin || 'contributor'}</span>
+                            <span>•</span>
+                            <span>{formatRelativeTime(commit.timestamp)}</span>
+                            <span>•</span>
+                            <span className="font-mono text-primary font-medium">#{commit.sha?.slice(0, 7)}</span>
+                            {commit.branch && <span className="font-mono text-muted-foreground">({commit.branch})</span>}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-1 text-[11px] font-mono shrink-0">
+                        <span className="text-emerald-500 font-mono">+{commit.additions || 0}</span>
+                        <span className="text-rose-500 font-mono">-{commit.deletions || 0}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono shrink-0">
-                      <span className="text-emerald-500">+{commit.additions}</span>
-                      <span className="text-rose-500">-{commit.deletions}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -572,40 +612,51 @@ export default function RepositoryDetailPage() {
               <span className="text-xs text-muted-foreground">{repoCommits.length} commits shown</span>
             </div>
 
-            <div className="divide-y divide-border/60">
-              {repoCommits.map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => setSelectedCommit(c)}
-                  className="py-3 px-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <img src={c.author.avatarUrl} alt={c.author.name} className="w-8 h-8 rounded-full mt-0.5 border border-border" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground hover:text-primary transition-colors">
-                        {c.message}
-                      </p>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                        <span className="font-medium text-foreground">{c.author.name}</span>
-                        <span>committed {formatRelativeTime(c.timestamp)}</span>
-                        <span>•</span>
-                        <span className="px-1.5 py-0.2 bg-secondary rounded text-[10px] font-mono text-primary font-medium">
-                          {c.sha}
-                        </span>
+              <div className="divide-y divide-border/60">
+                {repoCommits.map((c) => (
+                  <div
+                    key={c.id || c.sha}
+                    onClick={() => setSelectedCommit(c)}
+                    className="py-3 px-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <img
+                        src={c.author?.avatarUrl || `https://github.com/${c.authorLogin || 'github'}.png`}
+                        alt={c.author?.name || c.authorLogin || 'Developer'}
+                        className="w-8 h-8 rounded-full mt-0.5 border border-border"
+                      />
+                      <div className="min-w-0">
+                        <a
+                          href={c.url || `https://github.com/${owner}/${repo}/commit/${c.sha}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-semibold text-foreground hover:text-primary transition-colors block truncate"
+                        >
+                          {c.message}
+                        </a>
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                          <span className="font-medium text-foreground">{c.author?.name || c.authorLogin || 'contributor'}</span>
+                          <span>committed {formatRelativeTime(c.timestamp)}</span>
+                          <span>•</span>
+                          <span className="px-1.5 py-0.2 bg-secondary rounded text-[10px] font-mono text-primary font-medium">
+                            #{c.sha?.slice(0, 7)}
+                          </span>
+                          {c.branch && <span className="font-mono text-muted-foreground">({c.branch})</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                    <div className="flex items-center gap-1.5 text-xs font-mono">
-                      <span className="text-emerald-500 font-semibold">+{c.additions}</span>
-                      <span className="text-rose-500 font-semibold">-{c.deletions}</span>
+                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                      <div className="flex items-center gap-1.5 text-xs font-mono">
+                        <span className="text-emerald-500 font-semibold">+{c.additions || 0}</span>
+                        <span className="text-rose-500 font-semibold">-{c.deletions || 0}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{c.filesChanged || 1} files</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{c.filesChanged || 2} files</span>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
           </div>
         </div>
       )}

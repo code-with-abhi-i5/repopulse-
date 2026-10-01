@@ -6,6 +6,7 @@ import { getOctokitClient } from '../lib/octokit.js';
 import { prisma } from '../lib/prisma.js';
 import { calculateHealthScore } from './health.service.js';
 import { broadcastActivityEvent } from '../lib/socket.js';
+import { cacheService } from './cache/cache.service.js';
 
 export async function syncRepository(
   fullName: string,
@@ -360,6 +361,14 @@ export async function syncRepository(
     title: `Repository ${fullName} successfully synced`,
     timestamp: new Date().toISOString(),
   });
+
+  // 7. Invalidate Caches for Repo and Contributors
+  try {
+    await cacheService.invalidateRepository(repo.id, fullName);
+    await cacheService.invalidateContributors();
+  } catch (cErr: any) {
+    console.warn(`⚠️ [GitHub Sync] Cache invalidation notice: ${cErr.message}`);
+  }
 
   console.log(`✅ [GitHub Sync] Finished sync for ${fullName}!`);
   return repo;

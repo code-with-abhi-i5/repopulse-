@@ -111,19 +111,27 @@ export async function getRepositories(req: Request, res: Response) {
 export async function getRepositoryById(req: Request, res: Response) {
   try {
     const id = String(req.params.id);
+    const fresh = req.query.fresh === 'true';
     const cacheKey = cacheKeys.repoDetail(id);
+
+    if (fresh) {
+      await cacheService.delete(cacheKey);
+    }
 
     const repo = await cacheService.getOrSet(
       cacheKey,
       async () => {
         const data = await prisma.repository.findFirst({
           where: {
-            OR: [{ id }, { fullName: id }],
+            OR: [
+              { id },
+              { fullName: { equals: id, mode: 'insensitive' } },
+            ],
           },
           include: {
-            commits: { take: 20, orderBy: { timestamp: 'desc' } },
-            pullRequests: { take: 10, orderBy: { createdAt: 'desc' } },
-            issues: { take: 10, orderBy: { createdAt: 'desc' } },
+            commits: { take: 50, orderBy: { timestamp: 'desc' } },
+            pullRequests: { take: 20, orderBy: { createdAt: 'desc' } },
+            issues: { take: 20, orderBy: { createdAt: 'desc' } },
             auditLogs: { take: 5, orderBy: { auditedAt: 'desc' } },
           },
         });
@@ -183,27 +191,31 @@ export async function runAuditEndpoint(req: Request, res: Response) {
 }
 
 export async function syncSingleRepoEndpoint(req: Request, res: Response) {
+  const fullName = String(req.body?.fullName || req.params?.fullName || '');
   try {
-    const fullName = String(req.body?.fullName || req.params.fullName || '');
     if (!fullName) {
       return res.status(400).json({ error: 'Missing fullName (owner/repo)' });
     }
 
-    // Queue sync in background
-    appQueue.add('sync-repo', {
-      fullName,
+    console.log(`🔄 [Manual Sync] Processing immediate sync for ${fullName}...`);
+
+    // Synchronously sync so the user immediately gets fresh commits
+    const repo = await syncRepository(fullName, {
       teamName: req.body?.teamName,
       hackathonBatch: req.body?.hackathonBatch,
     });
 
-    // Invalidate cache for this repo
-    await cacheService.invalidateRepository(fullName, fullName);
+    // Invalidate caches
+    await cacheService.invalidateRepository(repo.id, fullName);
+    await cacheService.invalidateContributors();
 
-    return res.status(202).json({
-      message: `Sync queued for ${fullName}`,
-      status: 'QUEUED',
+    return res.status(200).json({
+      message: `Sync completed successfully for ${fullName}`,
+      status: 'SUCCESS',
+      repository: repo,
     });
   } catch (err: any) {
+    console.error(`❌ [Manual Sync Error] ${fullName}:`, err.message);
     return res.status(500).json({ error: err.message });
   }
 }
