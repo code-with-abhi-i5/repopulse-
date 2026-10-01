@@ -33,6 +33,33 @@ const upload = multer({
 export const apiRouter = Router();
 
 // -------------------------------------------------------------
+// Root API v1 Directory & Status Index
+// -------------------------------------------------------------
+apiRouter.get('/', (req: Request, res: Response) => {
+  res.json({
+    name: 'RepoPulse API Engine v1',
+    status: 'online',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    documentation: 'https://github.com/code-with-abhi-i5/repopulse-',
+    endpoints: {
+      health: '/api/v1/health',
+      repositories: '/api/v1/repositories',
+      activities: '/api/v1/activities',
+      contributors: '/api/v1/contributors',
+      pullRequests: '/api/v1/pull-requests',
+      issues: '/api/v1/issues',
+      alerts: '/api/v1/alerts',
+      analytics: '/api/v1/analytics',
+      reports: '/api/v1/reports',
+      teams: '/api/v1/teams',
+      auth: {
+        login: '/api/v1/auth/login',
+        me: '/api/v1/auth/me',
+      },
+    },
+  });
+});
 // Authentication Endpoints
 // -------------------------------------------------------------
 apiRouter.post('/auth/login', login);
