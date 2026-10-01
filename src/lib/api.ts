@@ -6,33 +6,41 @@ import type { Repository, ActivityEvent, Contributor, Alert, PullRequest, Issue 
 
 const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://repopulse-api-v5tc.onrender.com/api/v1' : 'http://localhost:5000/api/v1');
 
-async function safeFetch<T>(endpoint: string, options: RequestInit = {}, fallback: T): Promise<T> {
-  try {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
-    const authHeaders: Record<string, string> = {};
-    if (token) {
-      authHeaders['Authorization'] = `Bearer ${token}`;
+async function safeFetch<T>(endpoint: string, options: RequestInit = {}, fallback: T, retries = 2): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+      const authHeaders: Record<string, string> = {};
+      if (token) {
+        authHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+          ...(options.headers || {}),
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const json = await res.json();
+      return (json.data !== undefined ? json.data : json) as T;
+    } catch (err: any) {
+      if (attempt < retries) {
+        // Wait 2s and retry (in case cloud server on Render is waking up from cold start)
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
+        console.warn(`[RepoPulse API] Fetch failed for ${endpoint}:`, err.message);
+        return fallback;
+      }
     }
-
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-        ...(options.headers || {}),
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    const json = await res.json();
-    return (json.data !== undefined ? json.data : json) as T;
-  } catch (err: any) {
-    console.warn(`[RepoPulse API] Fetch failed for ${endpoint}:`, err.message);
-    return fallback;
   }
+  return fallback;
 }
 
 export const api = {

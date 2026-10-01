@@ -19,8 +19,12 @@ const server = http.createServer(app);
 
 // 1. Middlewares
 app.use(cors({
-  origin: '*', // Allow all origins for dev/dashboard
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  origin: (origin, callback) => {
+    // Dynamic origin callback safely reflects request origin (supports Vercel, localhost, and custom domains)
+    callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
   credentials: true,
 }));
 
