@@ -4,7 +4,7 @@
 
 import type { Repository, ActivityEvent, Contributor, Alert, PullRequest, Issue } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://repopulse-api-v5tc.onrender.com/api/v1' : 'http://localhost:5000/api/v1');
 
 async function safeFetch<T>(endpoint: string, options: RequestInit = {}, fallback: T): Promise<T> {
   try {

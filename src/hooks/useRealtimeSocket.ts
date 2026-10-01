@@ -7,7 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import { useRealtimeStore, useNotificationStore, useRepositoryStore } from '../stores';
 import type { ActivityEvent } from '../types';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://repopulse-api-v5tc.onrender.com' : 'http://localhost:5000');
 
 let socket: Socket | null = null;
 
