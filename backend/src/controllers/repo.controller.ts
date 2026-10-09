@@ -222,14 +222,44 @@ export async function syncSingleRepoEndpoint(req: Request, res: Response) {
 
 export async function deleteRepository(req: Request, res: Response) {
   try {
-    const id = String(req.params.id);
-    await prisma.repository.delete({ where: { id } });
+    const identifier = String(
+      req.params.id || req.query.id || req.query.fullName || req.body?.id || req.body?.fullName || ''
+    ).trim();
 
-    // Target invalidation of repo detail, health, and list caches
-    await cacheService.invalidateRepository(id);
+    if (!identifier) {
+      return res.status(400).json({ error: 'Repository ID or Full Name is required.' });
+    }
 
-    return res.json({ success: true, message: `Repository ${id} deleted.` });
+    // Find the repo first by id or fullName
+    const repo = await prisma.repository.findFirst({
+      where: {
+        OR: [
+          { id: identifier },
+          { fullName: { equals: identifier, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!repo) {
+      return res.status(404).json({ error: `Repository "${identifier}" not found.` });
+    }
+
+    // Cascade delete in Prisma
+    await prisma.repository.delete({ where: { id: repo.id } });
+
+    // Target invalidation of repo detail, health, list, contributor, and activity caches
+    await cacheService.invalidateRepository(repo.id, repo.fullName);
+    await cacheService.invalidateContributors();
+    await cacheService.invalidateActivities();
+
+    return res.json({
+      success: true,
+      message: `Repository ${repo.fullName} deleted successfully.`,
+      deletedId: repo.id,
+      deletedFullName: repo.fullName,
+    });
   } catch (err: any) {
+    console.error('Error deleting repository:', err);
     return res.status(500).json({ error: err.message });
   }
 }

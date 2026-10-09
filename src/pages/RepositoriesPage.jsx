@@ -66,6 +66,31 @@ export default function RepositoriesPage() {
   const [importNotification, setImportNotification] = useState(null)
   const [compareList, setCompareList] = useState([])
   const [isCompareOpen, setIsCompareOpen] = useState(false)
+  const [repoToDelete, setRepoToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteAdminKey, setDeleteAdminKey] = useState('hackqubit-admin-secret-2026')
+  const [deleteError, setDeleteError] = useState(null)
+
+  const handleConfirmDelete = async () => {
+    if (!repoToDelete) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await api.deleteRepository(repoToDelete.id, deleteAdminKey)
+      setRepositories((prev) => prev.filter((r) => r.id !== repoToDelete.id))
+      setCompareList((prev) => prev.filter((id) => id !== repoToDelete.id))
+      setImportNotification({
+        title: 'Repository Deleted',
+        message: res.message || `Successfully removed ${repoToDelete.fullName || repoToDelete.name} from fleet tracking.`,
+      })
+      setRepoToDelete(null)
+      setTimeout(() => setImportNotification(null), 5000)
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete repository.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   // Fetch initial repositories from Backend
   useEffect(() => {
@@ -688,13 +713,25 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                             </span>
                           </div>
 
-                          <Link
-                            to={`/repositories/${repo.owner}/${repo.name}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300"
-                          >
-                            <span>Inspect</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </Link>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setRepoToDelete(repo)
+                                setDeleteError(null)
+                              }}
+                              className="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              title="Delete Repository"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <Link
+                              to={`/repositories/${repo.owner}/${repo.name}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+                            >
+                              <span>Inspect</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     )
@@ -854,6 +891,18 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                         <GitCompare className="w-3.5 h-3.5" />
                       </button>
 
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setRepoToDelete(repo)
+                          setDeleteError(null)
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+                        title="Delete repository"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
                       <Link
                         to={`/repositories/${repo.owner}/${repo.name}`}
                         className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-indigo-600 hover:text-white text-slate-200 font-semibold text-xs transition-colors flex items-center gap-1 border border-white/10"
@@ -948,8 +997,19 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                           className={`p-1.5 rounded-lg text-xs font-medium ${
                             isCompared ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/[0.06] text-slate-400'
                           }`}
+                          title={isCompared ? 'Remove comparison' : 'Compare'}
                         >
                           <GitCompare className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRepoToDelete(repo)
+                            setDeleteError(null)
+                          }}
+                          className="p-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          title="Delete Repository"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                         <Link
                           to={`/repositories/${repo.owner}/${repo.name}`}
@@ -1354,6 +1414,85 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Repository Confirmation Modal */}
+      {repoToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md p-6 rounded-2xl glass-card border border-rose-500/30 bg-slate-950/90 shadow-2xl space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-white">Delete Repository</h3>
+                <p className="text-xs text-slate-400">
+                  Are you sure you want to delete <span className="font-semibold text-rose-300 font-mono">{repoToDelete.fullName || repoToDelete.name}</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 space-y-1.5">
+              <div className="font-semibold flex items-center gap-1.5 text-rose-400">
+                <ShieldAlert className="w-4 h-4" />
+                Permanent Deletion Warning
+              </div>
+              <p className="text-[11px] text-rose-200/80 leading-relaxed">
+                This will permanently delete this repository and purge all associated commits, PRs, issues, real-time activity events, and anti-cheat audit records from the database.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Organizer Admin PIN / Key</label>
+              <input
+                type="password"
+                value={deleteAdminKey}
+                onChange={(e) => setDeleteAdminKey(e.target.value)}
+                placeholder="Enter admin key..."
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-900/90 border border-white/10 text-white font-mono text-xs focus:outline-hidden focus:border-rose-500/50"
+              />
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => {
+                  setRepoToDelete(null)
+                  setDeleteError(null)
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Permanently
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

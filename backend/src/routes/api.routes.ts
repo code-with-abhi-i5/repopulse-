@@ -104,6 +104,7 @@ apiRouter.post('/repositories/sync', syncSingleRepoEndpoint);
 // Organizer / Admin Mutations (Protected by requireAdminKey)
 apiRouter.post('/repositories/upload-excel', requireAdminKey, upload.single('file'), uploadExcelHandler);
 apiRouter.post('/repositories/bulk-add', requireAdminKey, bulkAddHandler);
+apiRouter.delete('/repositories', requireAdminKey, deleteRepository);
 apiRouter.delete('/repositories/:id', requireAdminKey, deleteRepository);
 
 // -------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { formatNumber, formatRelativeTime, formatDate } from '../lib/utils'
 import {
@@ -27,10 +27,14 @@ import {
   Check,
   ChevronRight,
   Layers,
+  Trash2,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react'
 
 export default function RepositoryDetailPage() {
   const { owner, repo } = useParams()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedBranch, setSelectedBranch] = useState('main')
   const [selectedCommit, setSelectedCommit] = useState(null)
@@ -38,6 +42,26 @@ export default function RepositoryDetailPage() {
   const [repoData, setRepoData] = useState(null)
   const [allContributors, setAllContributors] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteAdminKey, setDeleteAdminKey] = useState('hackqubit-admin-secret-2026')
+  const [deleteError, setDeleteError] = useState(null)
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      const idToTarget = repoData?.id || `${owner}/${repo}`
+      await api.deleteRepository(idToTarget, deleteAdminKey)
+      navigate('/repositories', {
+        replace: true,
+      })
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete repository.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   // Fetch real repository details from backend
   useEffect(() => {
@@ -198,6 +222,18 @@ export default function RepositoryDetailPage() {
             <ExternalLink className="w-3.5 h-3.5" />
             GitHub
           </a>
+
+          <button
+            onClick={() => {
+              setIsDeleteModalOpen(true)
+              setDeleteError(null)
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all shadow-xs"
+            title="Delete this repository"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete</span>
+          </button>
         </div>
       </div>
 
@@ -935,6 +971,110 @@ export default function RepositoryDetailPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Danger Zone Section */}
+      <div className="p-6 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-rose-500" />
+              Danger Zone — Delete Repository
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Permanently remove <span className="font-mono text-foreground font-semibold">{repository.fullName}</span> and all associated telemetry, commits, code churn metrics, and anti-cheat audit logs from RepoPulse database.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setIsDeleteModalOpen(true)
+              setDeleteError(null)
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/25 transition-all self-start sm:self-auto shrink-0"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete This Repository
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md p-6 rounded-2xl bg-card border border-rose-500/30 shadow-2xl space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-foreground">Delete Repository</h3>
+                <p className="text-xs text-muted-foreground">
+                  Are you sure you want to delete <span className="font-semibold text-rose-400 font-mono">{repository.fullName}</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 space-y-1.5">
+              <div className="font-semibold flex items-center gap-1.5 text-rose-400">
+                <ShieldAlert className="w-4 h-4" />
+                Permanent Action
+              </div>
+              <p className="text-[11px] text-rose-200/80 leading-relaxed">
+                This will purge all commits, branch telemetry, pull requests, issues, activity events, and anti-cheat audit records for this repository. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">Organizer Admin PIN / Key</label>
+              <input
+                type="password"
+                value={deleteAdminKey}
+                onChange={(e) => setDeleteAdminKey(e.target.value)}
+                placeholder="Enter admin key..."
+                className="w-full px-3.5 py-2 rounded-xl bg-secondary/50 border border-border text-foreground font-mono text-xs focus:outline-hidden focus:border-rose-500/50"
+              />
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false)
+                  setDeleteError(null)
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Permanently
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

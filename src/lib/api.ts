@@ -123,13 +123,25 @@ export const api = {
   },
 
   async deleteRepository(id: string, adminKey: string = 'hackqubit-admin-secret-2026'): Promise<any> {
-    const res = await fetch(`${API_BASE}/repositories/${id}`, {
+    const encodedId = encodeURIComponent(id);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+    const headers: Record<string, string> = {
+      'x-admin-key': adminKey,
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE}/repositories/${encodedId}`, {
       method: 'DELETE',
-      headers: {
-        'x-admin-key': adminKey,
-      },
+      headers,
     });
-    return await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+    }
+    return data;
   },
 
   // Upload Excel / CSV file
