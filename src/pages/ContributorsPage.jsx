@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { formatNumber, formatDate, formatRelativeTime } from '../lib/utils'
 import {
@@ -90,6 +91,7 @@ export default function ContributorsPage() {
   const [contributorCommits, setContributorCommits] = useState([])
   const [contributorPRs, setContributorPRs] = useState([])
   const [contributorIssues, setContributorIssues] = useState([])
+  const [contributorRepoBreakdown, setContributorRepoBreakdown] = useState({})
   const [isSyncingContributor, setIsSyncingContributor] = useState(false)
 
   const loadContributorDetails = async (login, fresh = true) => {
@@ -100,15 +102,18 @@ export default function ContributorsPage() {
         setContributorCommits(data.commits || [])
         setContributorPRs(data.pullRequests || [])
         setContributorIssues(data.issues || [])
+        setContributorRepoBreakdown(data.repoBreakdown || {})
       } else {
         setContributorCommits([])
         setContributorPRs([])
         setContributorIssues([])
+        setContributorRepoBreakdown({})
       }
     } catch {
       setContributorCommits([])
       setContributorPRs([])
       setContributorIssues([])
+      setContributorRepoBreakdown({})
     } finally {
       setIsSyncingContributor(false)
     }
@@ -135,6 +140,7 @@ export default function ContributorsPage() {
       setContributorCommits([])
       setContributorPRs([])
       setContributorIssues([])
+      setContributorRepoBreakdown({})
       return
     }
     loadContributorDetails(selectedContributor.login, true)
@@ -557,6 +563,58 @@ export default function ContributorsPage() {
               </div>
             </div>
 
+            {/* Repository Commit Breakdown */}
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-white/[0.08] space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
+                  Repository Commit Breakdown
+                </h4>
+                <span className="text-[11px] text-slate-500 font-mono">
+                  {Object.keys(contributorRepoBreakdown).length || (selectedContributor.primaryRepo ? 1 : 0)} connected repos
+                </span>
+              </div>
+
+              {Object.keys(contributorRepoBreakdown).length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                  {Object.entries(contributorRepoBreakdown).map(([repoName, count]) => (
+                    <Link
+                      key={repoName}
+                      to={`/repositories/${repoName}`}
+                      className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:border-indigo-500/40 hover:bg-white/[0.06] transition-all flex items-center justify-between group"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="text-xs font-semibold text-slate-200 group-hover:text-indigo-300 truncate block">
+                          {repoName}
+                        </span>
+                        <span className="text-[10px] text-slate-500">Repository</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-xs font-bold font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 shrink-0">
+                        {count} {count === 1 ? 'commit' : 'commits'}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : selectedContributor.primaryRepo ? (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <Link
+                    to={`/repositories/${selectedContributor.primaryRepo}`}
+                    className="text-xs font-semibold text-indigo-300 hover:underline flex items-center gap-1.5 truncate max-w-[280px]"
+                  >
+                    <FolderGit2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span>{selectedContributor.primaryRepo}</span>
+                  </Link>
+                  <span className="px-2 py-0.5 rounded text-xs font-bold font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 shrink-0">
+                    {selectedContributor.commits} commits
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 py-1 text-center">
+                  No repository commits logged for this contributor yet.
+                </p>
+              )}
+            </div>
+
             {/* Tabs for Commits, PRs, Issues */}
             <div className="flex border-b border-white/[0.08] mb-4 overflow-x-auto hide-scrollbar">
               <button
@@ -600,14 +658,18 @@ export default function ContributorsPage() {
                       <div key={c.id || c.sha} className="py-2.5 px-3 flex items-center justify-between text-xs hover:bg-white/[0.02] transition-colors rounded-lg">
                         <div className="min-w-0 pr-4">
                           <a
-                            href={c.url || `https://github.com/${selectedContributor.primaryRepo || 'code-with-abhi-i5/repopulse-'}/commit/${c.sha}`}
+                            href={c.url || `https://github.com/${c.repository?.fullName || selectedContributor.primaryRepo || 'code-with-abhi-i5/repopulse-'}/commit/${c.sha}`}
                             target="_blank"
                             rel="noreferrer"
                             className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block"
                           >
                             {c.message}
                           </a>
-                          <span className="text-slate-500 text-[11px] flex items-center gap-1.5 mt-0.5">
+                          <span className="text-slate-500 text-[11px] flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
+                              {c.repository?.fullName || selectedContributor.primaryRepo || 'repository'}
+                            </span>
+                            <span>•</span>
                             <span>{formatRelativeTime(c.timestamp)}</span>
                             <span>•</span>
                             <span className="font-mono text-indigo-400">#{c.sha?.slice(0, 7)}</span>
@@ -639,8 +701,14 @@ export default function ContributorsPage() {
                           <GitPullRequest className={`w-4 h-4 shrink-0 ${pr.state === 'MERGED' ? 'text-purple-400' : pr.state === 'OPEN' ? 'text-emerald-400' : 'text-rose-400'}`} />
                           <div className="min-w-0">
                             <a href={pr.url} target="_blank" rel="noreferrer" className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block">{pr.title}</a>
-                            <span className="text-slate-500 text-[11px]">
-                              {formatRelativeTime(pr.createdAt)} • <span className="font-mono">#{pr.number}</span>
+                            <span className="text-slate-500 text-[11px] flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
+                                {pr.repository?.fullName || selectedContributor.primaryRepo || 'repository'}
+                              </span>
+                              <span>•</span>
+                              <span>{formatRelativeTime(pr.createdAt)}</span>
+                              <span>•</span>
+                              <span className="font-mono">#{pr.number}</span>
                             </span>
                           </div>
                         </div>
@@ -664,8 +732,14 @@ export default function ContributorsPage() {
                           <AlertCircle className={`w-4 h-4 shrink-0 ${issue.state === 'OPEN' ? 'text-emerald-400' : 'text-purple-400'}`} />
                           <div className="min-w-0">
                             <a href={issue.url} target="_blank" rel="noreferrer" className="font-semibold text-slate-200 hover:text-indigo-400 transition-colors truncate block">{issue.title}</a>
-                            <span className="text-slate-500 text-[11px]">
-                              {formatRelativeTime(issue.createdAt)} • <span className="font-mono">#{issue.number}</span>
+                            <span className="text-slate-500 text-[11px] flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
+                                {issue.repository?.fullName || selectedContributor.primaryRepo || 'repository'}
+                              </span>
+                              <span>•</span>
+                              <span>{formatRelativeTime(issue.createdAt)}</span>
+                              <span>•</span>
+                              <span className="font-mono">#{issue.number}</span>
                             </span>
                           </div>
                         </div>

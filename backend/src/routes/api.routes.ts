@@ -11,6 +11,8 @@ import {
   runAuditEndpoint,
   syncSingleRepoEndpoint,
   deleteRepository,
+  scanInvalidRepos,
+  cleanupInvalidRepos,
 } from '../controllers/repo.controller.js';
 import { uploadExcelHandler, bulkAddHandler } from '../controllers/excel.controller.js';
 import { getActivities } from '../controllers/activity.controller.js';
@@ -97,6 +99,10 @@ apiRouter.get('/health', async (req: Request, res: Response) => {
 // -------------------------------------------------------------
 apiRouter.get('/repositories', getRepositories);
 apiRouter.get('/repositories/:id', getRepositoryById);
+apiRouter.get('/repositories/:owner/:repo', (req: Request, res: Response) => {
+  req.params.id = `${req.params.owner}/${req.params.repo}`;
+  return getRepositoryById(req, res);
+});
 apiRouter.get('/repositories/:id/health', getRepositoryHealth);
 apiRouter.post('/repositories/:id/anti-cheat-audit', runAuditEndpoint);
 apiRouter.post('/repositories/sync', syncSingleRepoEndpoint);
@@ -104,8 +110,14 @@ apiRouter.post('/repositories/sync', syncSingleRepoEndpoint);
 // Organizer / Admin Mutations (Protected by requireAdminKey)
 apiRouter.post('/repositories/upload-excel', requireAdminKey, upload.single('file'), uploadExcelHandler);
 apiRouter.post('/repositories/bulk-add', requireAdminKey, bulkAddHandler);
+apiRouter.post('/repositories/scan-invalid', scanInvalidRepos);
+apiRouter.post('/repositories/cleanup-invalid', requireAdminKey, cleanupInvalidRepos);
 apiRouter.delete('/repositories', requireAdminKey, deleteRepository);
 apiRouter.delete('/repositories/:id', requireAdminKey, deleteRepository);
+apiRouter.delete('/repositories/:owner/:repo', requireAdminKey, (req: Request, res: Response) => {
+  req.params.id = `${req.params.owner}/${req.params.repo}`;
+  return deleteRepository(req, res);
+});
 
 // -------------------------------------------------------------
 // Teams & Multi-Repository Aggregations

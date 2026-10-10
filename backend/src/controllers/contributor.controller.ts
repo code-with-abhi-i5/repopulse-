@@ -8,7 +8,7 @@ import { cacheService, cacheKeys, CACHE_TTL } from '../services/cache/cache.serv
 
 export async function getContributors(req: Request, res: Response) {
   try {
-    const limit = parseInt(req.query.limit as string || '50', 10);
+    const limit = parseInt(req.query.limit as string || '500', 10);
     const teamName = req.query.teamName as string;
 
     const cacheKey = cacheKeys.contributorsList({ limit, teamName });
@@ -47,16 +47,53 @@ export async function getContributorByLogin(req: Request, res: Response) {
     const contributor = await cacheService.getOrSet(
       cacheKey,
       async () => {
-        return prisma.contributor.findFirst({
+        const data = await prisma.contributor.findFirst({
           where: {
             login: { equals: login, mode: 'insensitive' },
           },
           include: {
-            commits: { take: 50, orderBy: { timestamp: 'desc' } },
-            pullRequests: { take: 20, orderBy: { createdAt: 'desc' } },
-            issues: { take: 20, orderBy: { createdAt: 'desc' } },
+            commits: {
+              take: 50,
+              orderBy: { timestamp: 'desc' },
+              include: {
+                repository: {
+                  select: { id: true, name: true, fullName: true },
+                },
+              },
+            },
+            pullRequests: {
+              take: 20,
+              orderBy: { createdAt: 'desc' },
+              include: {
+                repository: {
+                  select: { id: true, name: true, fullName: true },
+                },
+              },
+            },
+            issues: {
+              take: 20,
+              orderBy: { createdAt: 'desc' },
+              include: {
+                repository: {
+                  select: { id: true, name: true, fullName: true },
+                },
+              },
+            },
           },
         });
+
+        if (!data) return null;
+
+        const repoBreakdown: Record<string, number> = {};
+        data.commits.forEach((c: any) => {
+          const repoName = c.repository?.fullName || c.repositoryId;
+          repoBreakdown[repoName] = (repoBreakdown[repoName] || 0) + 1;
+        });
+
+        return {
+          ...data,
+          repoBreakdown,
+        };
       },
       CACHE_TTL.CONTRIBUTOR_DETAIL
     );

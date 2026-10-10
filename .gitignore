@@ -27,3 +27,11 @@ dist-ssr
 .env.*
 *.env
 !.env.example
+
+# Test screenshots and export files
+/landing_*.png
+/modal_test.png
+*.xlsx
+~$*
+committers_list.*
+RepoPulse_Fleet_Report.*

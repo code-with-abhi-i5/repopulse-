@@ -141,6 +141,21 @@ export default function RepositoryDetailPage() {
     return repoData?.workflows || []
   }, [repoData])
 
+  const repoTotalCommits = useMemo(() => {
+    return repoData?.commitsCount ?? repoData?.totalCommits ?? repoCommits.length ?? 0
+  }, [repoData, repoCommits])
+
+  const commitsByAuthorInRepo = useMemo(() => {
+    const map = {}
+    repoCommits.forEach((commit) => {
+      const key = (commit.authorLogin || commit.author?.login || commit.author?.name || '').toLowerCase()
+      if (key) {
+        map[key] = (map[key] || 0) + 1
+      }
+    })
+    return map
+  }, [repoCommits])
+
   const repoContributors = useMemo(() => {
     if (!allContributors?.length) return []
     return allContributors.filter((c) => !c.repositories?.length || c.repositories.includes(repoId) || c.repositories.includes(repository.fullName)).slice(0, 6)
@@ -312,7 +327,15 @@ export default function RepositoryDetailPage() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mt-6 pt-6 border-t border-border/60">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6 pt-6 border-t border-border/60">
+          <div className="p-3 rounded-lg bg-background/50 border border-border/60">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <Code2 className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Total Commits</span>
+            </div>
+            <span className="text-lg font-bold text-indigo-400 font-mono">{formatNumber(repoTotalCommits)}</span>
+          </div>
+
           <div className="p-3 rounded-lg bg-background/50 border border-border/60">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
               <Star className="w-3.5 h-3.5 text-amber-500" />
@@ -367,7 +390,7 @@ export default function RepositoryDetailPage() {
       <div className="flex items-center gap-1 border-b border-border overflow-x-auto pb-px">
         {[
           { id: 'overview', label: 'Overview & Insights', icon: Activity },
-          { id: 'commits', label: 'Commits & Heatmap', icon: Code2, count: repoCommits.length },
+          { id: 'commits', label: 'Commits & Heatmap', icon: Code2, count: repoTotalCommits },
           { id: 'pulls', label: 'Pull Requests', icon: GitPullRequest, count: repoPRs.length },
           { id: 'issues', label: 'Issues & Triage', icon: AlertCircle, count: repoIssues.length },
           { id: 'workflows', label: 'CI / CD Workflows', icon: Terminal, count: repoWorkflows.length },
@@ -543,27 +566,33 @@ export default function RepositoryDetailPage() {
               </h3>
 
               <div className="space-y-3">
-                {repoContributors.map((c, idx) => (
-                  <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30 border border-border/50">
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative">
-                        <img src={c.avatarUrl} alt={c.name} className="w-8 h-8 rounded-full border border-border" />
-                        <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                          {idx + 1}
-                        </span>
+                {repoContributors.map((c, idx) => {
+                  const inRepo = commitsByAuthorInRepo[c.login?.toLowerCase()] || commitsByAuthorInRepo[c.name?.toLowerCase()] || 0
+                  return (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30 border border-border/50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative">
+                          <img src={c.avatarUrl} alt={c.name} className="w-8 h-8 rounded-full border border-border" />
+                          <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-foreground">{c.name}</div>
+                          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <span className="font-bold text-primary font-mono">{inRepo > 0 ? inRepo : (c.commits || 0)}</span>
+                            <span>commits in this repo</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-foreground">{c.name}</div>
-                        <div className="text-[11px] text-muted-foreground">{c.commits} commits</div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-1 text-xs text-amber-500 font-medium">
-                      <Flame className="w-3.5 h-3.5 fill-amber-500" />
-                      <span>{c.currentStreak}d</span>
+                      <div className="flex items-center gap-1 text-xs text-amber-500 font-medium">
+                        <Flame className="w-3.5 h-3.5 fill-amber-500" />
+                        <span>{c.currentStreak}d</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -893,43 +922,46 @@ export default function RepositoryDetailPage() {
       {/* Tab: Contributors */}
       {activeTab === 'contributors' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {repoContributors.map((c) => (
-            <div key={c.id} className="p-5 rounded-2xl bg-card border border-border shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={c.avatarUrl} alt={c.name} className="w-10 h-10 rounded-full border border-border" />
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">{c.name}</h4>
-                    <span className="text-xs text-muted-foreground font-mono">@{c.login}</span>
+          {repoContributors.map((c) => {
+            const inRepo = commitsByAuthorInRepo[c.login?.toLowerCase()] || commitsByAuthorInRepo[c.name?.toLowerCase()] || 0
+            return (
+              <div key={c.id} className="p-5 rounded-2xl bg-card border border-border shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={c.avatarUrl} alt={c.name} className="w-10 h-10 rounded-full border border-border" />
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">{c.name}</h4>
+                      <span className="text-xs text-muted-foreground font-mono">@{c.login}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-amber-500 font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                    <Flame className="w-3.5 h-3.5 fill-amber-500" />
+                    <span>{c.currentStreak}d</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-amber-500 font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                  <Flame className="w-3.5 h-3.5 fill-amber-500" />
-                  <span>{c.currentStreak}d</span>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/60 text-center text-xs">
-                <div>
-                  <div className="text-muted-foreground text-[11px]">Commits</div>
-                  <div className="font-bold text-foreground mt-0.5">{c.commits}</div>
+                <div className="grid grid-cols-3 gap-2 py-3 border-y border-border/60 text-center text-xs">
+                  <div>
+                    <div className="text-muted-foreground text-[11px]">This Repo</div>
+                    <div className="font-bold text-primary font-mono mt-0.5">{inRepo > 0 ? inRepo : (c.commits || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-[11px]">Additions</div>
+                    <div className="font-bold text-emerald-500 mt-0.5">+{formatNumber(c.additions)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-[11px]">Deletions</div>
+                    <div className="font-bold text-rose-500 mt-0.5">-{formatNumber(c.deletions)}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground text-[11px]">Additions</div>
-                  <div className="font-bold text-emerald-500 mt-0.5">+{formatNumber(c.additions)}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-[11px]">Deletions</div>
-                  <div className="font-bold text-rose-500 mt-0.5">-{formatNumber(c.deletions)}</div>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Active for {c.activeDays} days</span>
-                <span>Best streak: {c.longestStreak}d</span>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>Total commits: <strong className="text-foreground">{c.commits}</strong></span>
+                  <span>Best streak: {c.longestStreak}d</span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

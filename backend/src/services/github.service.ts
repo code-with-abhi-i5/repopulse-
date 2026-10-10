@@ -120,21 +120,22 @@ export async function syncRepository(
     });
 
     for (const c of commits) {
-      const authorLogin = c.author?.login || c.commit.author?.name || 'unknown';
+      const authorLogin = c.author?.login || (c.commit.author?.name ? c.commit.author.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'unknown');
 
-      // Ensure author contributor exists
-      if (c.author?.login) {
-        await prisma.contributor.upsert({
-          where: { login: c.author.login },
-          create: {
-            login: c.author.login,
-            avatarUrl: c.author.avatar_url,
-            primaryRepo: fullName,
-            repositories: [fullName],
-          },
-          update: {},
-        });
-      }
+      // Ensure author contributor exists before commit upsert to satisfy foreign key constraint
+      await prisma.contributor.upsert({
+        where: { login: authorLogin },
+        create: {
+          login: authorLogin,
+          name: c.commit.author?.name || authorLogin,
+          avatarUrl: c.author?.avatar_url || `https://github.com/identicons/${encodeURIComponent(authorLogin)}.png`,
+          primaryRepo: fullName,
+          repositories: [fullName],
+        },
+        update: {
+          avatarUrl: c.author?.avatar_url || undefined,
+        },
+      });
 
       // Check if commit already exists
       const existingCommit = await prisma.commit.findUnique({
@@ -171,7 +172,7 @@ export async function syncRepository(
         create: {
           sha: c.sha,
           message: c.commit.message,
-          authorLogin: c.author?.login || 'unknown',
+          authorLogin: authorLogin,
           branch: repoData.default_branch,
           repositoryId: repo.id,
           timestamp: new Date(c.commit.author?.date || Date.now()),
@@ -266,18 +267,18 @@ export async function syncRepository(
 
     for (const p of prs) {
       const authorLogin = p.user?.login || 'unknown';
-      if (p.user?.login) {
-        await prisma.contributor.upsert({
-          where: { login: p.user.login },
-          create: {
-            login: p.user.login,
-            avatarUrl: p.user.avatar_url,
-            primaryRepo: fullName,
-            repositories: [fullName],
-          },
-          update: {},
-        });
-      }
+      await prisma.contributor.upsert({
+        where: { login: authorLogin },
+        create: {
+          login: authorLogin,
+          avatarUrl: p.user?.avatar_url || `https://github.com/identicons/${encodeURIComponent(authorLogin)}.png`,
+          primaryRepo: fullName,
+          repositories: [fullName],
+        },
+        update: {
+          avatarUrl: p.user?.avatar_url || undefined,
+        },
+      });
 
       const createdAt = new Date(p.created_at);
       const mergedAt = p.merged_at ? new Date(p.merged_at) : null;
@@ -334,18 +335,18 @@ export async function syncRepository(
       if (i.pull_request) continue; // Skip PRs, handled separately
 
       const authorLogin = i.user?.login || 'unknown';
-      if (i.user?.login) {
-        await prisma.contributor.upsert({
-          where: { login: i.user.login },
-          create: {
-            login: i.user.login,
-            avatarUrl: i.user.avatar_url,
-            primaryRepo: fullName,
-            repositories: [fullName],
-          },
-          update: {},
-        });
-      }
+      await prisma.contributor.upsert({
+        where: { login: authorLogin },
+        create: {
+          login: authorLogin,
+          avatarUrl: i.user?.avatar_url || `https://github.com/identicons/${encodeURIComponent(authorLogin)}.png`,
+          primaryRepo: fullName,
+          repositories: [fullName],
+        },
+        update: {
+          avatarUrl: i.user?.avatar_url || undefined,
+        },
+      });
 
       await prisma.issue.upsert({
         where: {

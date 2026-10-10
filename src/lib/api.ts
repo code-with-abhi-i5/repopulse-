@@ -144,6 +144,30 @@ export const api = {
     return data;
   },
 
+  async scanInvalidRepos(): Promise<{ totalScanned: number; invalidCount: number; invalidRepos: any[] }> {
+    return safeFetch<any>('/repositories/scan-invalid', { method: 'POST' }, { totalScanned: 0, invalidCount: 0, invalidRepos: [] });
+  },
+
+  async cleanupInvalidRepos(adminKey: string = 'hackqubit-admin-secret-2026'): Promise<{ success: boolean; message: string; deletedCount: number; deletedRepos: string[] }> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('repopulse_auth_token') : null;
+    const headers: Record<string, string> = {
+      'x-admin-key': adminKey,
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/repositories/cleanup-invalid`, {
+      method: 'POST',
+      headers,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+    }
+    return data;
+  },
+
+
   // Upload Excel / CSV file
   async uploadExcel(
     file: File,
@@ -228,7 +252,7 @@ export const api = {
 
   // Contributors
   async getContributors(): Promise<Contributor[]> {
-    const data = await safeFetch<any[]>('/contributors', { method: 'GET' }, []);
+    const data = await safeFetch<any[]>('/contributors?limit=500', { method: 'GET' }, []);
     return data.map((c: any) => ({
       ...c,
       commits: c.totalCommits || c.commits || 0,
@@ -244,6 +268,7 @@ export const api = {
     const prs = await safeFetch<any[]>('/pull-requests', { method: 'GET' }, []);
     return prs.map((pr: any) => ({
       ...pr,
+      state: (pr.state || 'open').toLowerCase() as any,
       author: { name: pr.authorLogin, avatarUrl: `https://github.com/${pr.authorLogin}.png` }
     })) as PullRequest[];
   },
@@ -252,6 +277,7 @@ export const api = {
     const issues = await safeFetch<any[]>('/issues', { method: 'GET' }, []);
     return issues.map((issue: any) => ({
       ...issue,
+      state: (issue.state || 'open').toLowerCase() as any,
       author: { name: issue.authorLogin, avatarUrl: `https://github.com/${issue.authorLogin}.png` }
     })) as Issue[];
   },

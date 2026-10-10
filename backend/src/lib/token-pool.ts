@@ -6,10 +6,12 @@ import { ENV } from '../config/env.js';
 
 class GitHubTokenPool {
   private tokens: string[] = [];
+  private blockedTokens: Set<string> = new Set();
   private currentIndex = 0;
 
   constructor() {
     this.refreshTokens();
+    this.verifyTokensBackground();
   }
 
   public refreshTokens() {
@@ -26,15 +28,48 @@ class GitHubTokenPool {
     }
   }
 
+  public markTokenBlocked(token: string) {
+    if (token && !this.blockedTokens.has(token)) {
+      this.blockedTokens.add(token);
+      console.warn(`⚠️ [GitHub Token Pool] Token ${token.slice(0, 8)}... marked as blocked/rate-limited. Quarantined. Active capacity: ${this.getActiveTokens().length} token(s).`);
+    }
+  }
+
+  private getActiveTokens(): string[] {
+    return this.tokens.filter((t) => !this.blockedTokens.has(t));
+  }
+
   public getNextToken(): string | undefined {
-    if (this.tokens.length === 0) return undefined;
-    const token = this.tokens[this.currentIndex];
-    this.currentIndex = (this.currentIndex + 1) % this.tokens.length;
+    const active = this.getActiveTokens();
+    if (active.length === 0) return undefined;
+    const token = active[this.currentIndex % active.length];
+    this.currentIndex = (this.currentIndex + 1) % active.length;
     return token;
   }
 
   public getPoolSize(): number {
-    return this.tokens.length;
+    return this.getActiveTokens().length;
+  }
+
+  private async verifyTokensBackground() {
+    for (const t of this.tokens) {
+      try {
+        const res = await fetch('https://api.github.com/user', {
+          headers: {
+            Authorization: `Bearer ${t}`,
+            'User-Agent': 'RepoPulse-Token-Validator',
+          },
+        });
+        const data: any = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (data?.message?.includes('rate limit exceeded') || data?.message?.includes('Bad credentials') || res.status === 401 || res.status === 403) {
+            this.markTokenBlocked(t);
+          }
+        }
+      } catch {
+        // Network timeout / ignore
+      }
+    }
   }
 }
 

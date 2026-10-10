@@ -133,6 +133,9 @@ export async function getRepositoryById(req: Request, res: Response) {
             pullRequests: { take: 20, orderBy: { createdAt: 'desc' } },
             issues: { take: 20, orderBy: { createdAt: 'desc' } },
             auditLogs: { take: 5, orderBy: { auditedAt: 'desc' } },
+            _count: {
+              select: { commits: true, pullRequests: true, issues: true },
+            },
           },
         });
 
@@ -141,6 +144,8 @@ export async function getRepositoryById(req: Request, res: Response) {
         return {
           ...data,
           githubId: Number(data.githubId),
+          commitsCount: data._count?.commits || data.commits?.length || 0,
+          totalCommits: data._count?.commits || data.commits?.length || 0,
         };
       },
       CACHE_TTL.REPO_DETAIL
@@ -209,10 +214,15 @@ export async function syncSingleRepoEndpoint(req: Request, res: Response) {
     await cacheService.invalidateRepository(repo.id, fullName);
     await cacheService.invalidateContributors();
 
+    const formattedRepo = {
+      ...repo,
+      githubId: Number(repo.githubId),
+    };
+
     return res.status(200).json({
       message: `Sync completed successfully for ${fullName}`,
       status: 'SUCCESS',
-      repository: repo,
+      repository: formattedRepo,
     });
   } catch (err: any) {
     console.error(`❌ [Manual Sync Error] ${fullName}:`, err.message);
@@ -263,3 +273,97 @@ export async function deleteRepository(req: Request, res: Response) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export async function scanInvalidRepos(req: Request, res: Response) {
+  try {
+    const repos = await prisma.repository.findMany({
+      select: { id: true, fullName: true, teamName: true, hackathonBatch: true },
+    });
+
+    const results: Array<{ id: string; fullName: string; teamName: string | null; status: number; is404: boolean }> = [];
+    const batchSize = 5;
+
+    for (let i = 0; i < repos.length; i += batchSize) {
+      const batch = repos.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (r) => {
+          try {
+            const check = await fetch(`https://github.com/${r.fullName}`, {
+              method: 'HEAD',
+              headers: { 'User-Agent': 'RepoPulse-HealthCheck' },
+            });
+            results.push({
+              id: r.id,
+              fullName: r.fullName,
+              teamName: r.teamName,
+              status: check.status,
+              is404: check.status === 404,
+            });
+          } catch {
+            results.push({
+              id: r.id,
+              fullName: r.fullName,
+              teamName: r.teamName,
+              status: 500,
+              is404: false,
+            });
+          }
+        })
+      );
+    }
+
+    const invalid = results.filter((r) => r.is404);
+    return res.json({
+      totalScanned: repos.length,
+      invalidCount: invalid.length,
+      invalidRepos: invalid,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function cleanupInvalidRepos(req: Request, res: Response) {
+  try {
+    const repos = await prisma.repository.findMany({
+      select: { id: true, fullName: true, teamName: true },
+    });
+
+    const deleted: string[] = [];
+    const batchSize = 5;
+
+    for (let i = 0; i < repos.length; i += batchSize) {
+      const batch = repos.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (r) => {
+          try {
+            const check = await fetch(`https://github.com/${r.fullName}`, {
+              method: 'HEAD',
+              headers: { 'User-Agent': 'RepoPulse-HealthCheck' },
+            });
+            if (check.status === 404) {
+              await prisma.repository.delete({ where: { id: r.id } });
+              await cacheService.invalidateRepository(r.id, r.fullName);
+              deleted.push(r.fullName);
+            }
+          } catch {
+            // ignore network issues
+          }
+        })
+      );
+    }
+
+    await cacheService.invalidateContributors();
+    await cacheService.invalidateActivities();
+
+    return res.json({
+      success: true,
+      message: `Cleaned up ${deleted.length} 404 / deleted repositories.`,
+      deletedCount: deleted.length,
+      deletedRepos: deleted,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { formatNumber, formatRelativeTime, getGreeting } from '../lib/utils'
 import { api } from '../lib/api'
-import { generateTimeSeriesData } from '../data/mock'
 import { useRealtimeStore, useDemoStore } from '../stores'
 import {
   FolderGit2,
@@ -44,8 +43,6 @@ export default function DashboardPage() {
   const { isDemoMode } = useDemoStore()
   const [repositories, setRepositories] = useState([])
   const [contributors, setContributors] = useState([])
-  const [chartPeriod, setChartPeriod] = useState('30')
-  const chartData = generateTimeSeriesData(parseInt(chartPeriod, 10))
 
   useEffect(() => {
     api.getRepositories().then((data) => setRepositories(data || [])).catch(() => setRepositories([]))

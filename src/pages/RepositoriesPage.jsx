@@ -70,6 +70,77 @@ export default function RepositoriesPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteAdminKey, setDeleteAdminKey] = useState('hackqubit-admin-secret-2026')
   const [deleteError, setDeleteError] = useState(null)
+  const [syncFilter, setSyncFilter] = useState('all')
+  const [syncingRepoName, setSyncingRepoName] = useState(null)
+  const [isScanning404, setIsScanning404] = useState(false)
+  const [invalidReposList, setInvalidReposList] = useState([])
+  const [isCleaning404, setIsCleaning404] = useState(false)
+
+  const handleSyncRepo = async (fullName) => {
+    setSyncingRepoName(fullName)
+    try {
+      await api.syncRepository(fullName)
+      const refreshed = await api.getRepositories()
+      if (refreshed) setRepositories(refreshed)
+      setImportNotification({
+        title: 'Repository Telemetry Synced',
+        message: `Successfully pulled latest commits and contributors from GitHub for ${fullName}.`,
+      })
+      setTimeout(() => setImportNotification(null), 5000)
+    } catch (err) {
+      setImportNotification({
+        title: 'Sync Notice',
+        message: err.message || `GitHub rate limit quota is renewing. Please try again in a few minutes.`,
+      })
+      setTimeout(() => setImportNotification(null), 6000)
+    } finally {
+      setSyncingRepoName(null)
+    }
+  }
+
+  const handleScan404 = async () => {
+    setIsScanning404(true)
+    try {
+      const res = await api.scanInvalidRepos()
+      const found = res.invalidRepos || []
+      setInvalidReposList(found)
+      if (found.length > 0) {
+        setImportNotification({
+          title: `Detected ${res.invalidCount} 404 / Invalid Repositories`,
+          message: `Identified repositories that return 404 on GitHub. You can clean them up now with one click.`,
+        })
+      } else {
+        setImportNotification({
+          title: 'All Repositories Validated',
+          message: `Scanned all repositories on GitHub. No 404 Not Found repos found!`,
+        })
+      }
+      setTimeout(() => setImportNotification(null), 6000)
+    } catch (err) {
+      console.error('Scan error:', err)
+    } finally {
+      setIsScanning404(false)
+    }
+  }
+
+  const handleCleanup404 = async () => {
+    setIsCleaning404(true)
+    try {
+      const res = await api.cleanupInvalidRepos(deleteAdminKey)
+      const latest = await api.getRepositories()
+      if (latest) setRepositories(latest)
+      setInvalidReposList([])
+      setImportNotification({
+        title: 'Cleanup Complete',
+        message: res.message || `Cleaned up all 404 repositories from the database.`,
+      })
+      setTimeout(() => setImportNotification(null), 5000)
+    } catch (err) {
+      console.error('Cleanup error:', err)
+    } finally {
+      setIsCleaning404(false)
+    }
+  }
 
   const handleConfirmDelete = async () => {
     if (!repoToDelete) return
@@ -79,6 +150,7 @@ export default function RepositoriesPage() {
       const res = await api.deleteRepository(repoToDelete.id, deleteAdminKey)
       setRepositories((prev) => prev.filter((r) => r.id !== repoToDelete.id))
       setCompareList((prev) => prev.filter((id) => id !== repoToDelete.id))
+      setInvalidReposList((prev) => prev.filter((r) => r.id !== repoToDelete.id && r.fullName !== repoToDelete.fullName))
       setImportNotification({
         title: 'Repository Deleted',
         message: res.message || `Successfully removed ${repoToDelete.fullName || repoToDelete.name} from fleet tracking.`,
@@ -259,58 +331,46 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
         return
       }
 
-      // Sync with backend API if online
+      // Sync with backend API
+      let registeredCount = teamsToImport.length
       try {
-        await api.bulkAddRepos(
+        const res = await api.bulkAddRepos(
           teamsToImport.map((t) => ({ teamName: t.teamName, repoUrl: t.repoUrl })),
           hackathonBatch,
           adminKey
         )
+        if (res && res.count) registeredCount = res.count
       } catch (err) {
-        // Fallback
+        console.warn('Backend bulk add notice:', err.message)
       }
 
-      const newRepos = teamsToImport.map((t, idx) => {
-        const randomScore = Math.floor(Math.random() * 14) + 84
-        return {
-          id: `repo-imported-${Date.now()}-${idx}`,
-          githubId: Math.floor(Math.random() * 1000000) + 90000000,
-          name: t.name,
-          fullName: t.fullName,
-          owner: t.owner,
-          description: `Hackathon participant project registered for ${t.teamName}. Synced with live telemetry engine.`,
-          visibility: 'public',
-          defaultBranch: 'main',
-          license: 'MIT',
-          language: idx % 3 === 0 ? 'TypeScript' : idx % 3 === 1 ? 'Python' : 'JavaScript',
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * (8 + idx * 3)).toISOString(),
-          updatedAt: new Date().toISOString(),
-          pushedAt: new Date().toISOString(),
-          stars: Math.floor(Math.random() * 80) + 10,
-          forks: Math.floor(Math.random() * 15) + 2,
-          watchers: Math.floor(Math.random() * 25) + 3,
-          openIssues: Math.floor(Math.random() * 4),
-          sizeKb: Math.floor(Math.random() * 7000) + 2500,
-          archived: false,
-          topics: ['hackathon-2026', 'live-telemetry'],
-          healthScore: randomScore,
-          teamName: t.teamName,
-        }
-      })
+      // Re-fetch real repositories from backend to show live data
+      const latest = await api.getRepositories()
+      if (latest && latest.length > 0) {
+        setRepositories(latest)
+      }
 
-      setRepositories((prev) => [...newRepos, ...prev])
       setIsImporting(false)
       setIsAddModalOpen(false)
       setBulkText('')
       setImportNotification({
         title: 'Hackathon Teams Registered',
-        message: `Successfully connected ${newRepos.length} participant teams with live telemetry.`,
+        message: `Successfully connected ${registeredCount} participant teams with live telemetry.`,
       })
       setTimeout(() => setImportNotification(null), 5000)
     } catch (e) {
       setIsImporting(false)
     }
   }
+
+  const syncedReposCount = useMemo(
+    () => repositories.filter((r) => (r.commitsCount || r.commits || 0) > 0).length,
+    [repositories]
+  )
+  const pendingReposCount = useMemo(
+    () => repositories.filter((r) => (r.commitsCount || r.commits || 0) === 0).length,
+    [repositories]
+  )
 
   // Filter & sort logic
   const filteredRepos = useMemo(() => {
@@ -326,7 +386,13 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
         const matchesLang =
           selectedLanguage === 'all' || repo.language?.toLowerCase() === selectedLanguage.toLowerCase()
 
-        return matchesSearch && matchesLang
+        const hasCommits = (repo.commitsCount || repo.commits || 0) > 0
+        const matchesSync =
+          syncFilter === 'all' ||
+          (syncFilter === 'synced' && hasCommits) ||
+          (syncFilter === 'pending' && !hasCommits)
+
+        return matchesSearch && matchesLang && matchesSync
       })
       .sort((a, b) => {
         if (sortBy === 'health') return (b.healthScore || 0) - (a.healthScore || 0)
@@ -337,7 +403,7 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
         if (sortBy === 'name') return a.name.localeCompare(b.name)
         return 0
       })
-  }, [repositories, searchQuery, selectedLanguage, sortBy])
+  }, [repositories, searchQuery, selectedLanguage, sortBy, syncFilter])
 
   // Group repositories by team for Multi-Repo Team Management
   const teamGroups = useMemo(() => {
@@ -463,12 +529,95 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
           )}
 
           <button
+            onClick={handleScan404}
+            disabled={isScanning404}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-xs transition-all disabled:opacity-50"
+            title="Scan and detect 404 / deleted repositories on GitHub"
+          >
+            <ShieldAlert className={`w-3.5 h-3.5 text-rose-400 ${isScanning404 ? 'animate-spin' : ''}`} />
+            <span>{isScanning404 ? 'Scanning 404s...' : 'Scan 404 Repos'}</span>
+          </button>
+
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <UploadCloud className="w-4 h-4" />
             Bulk Import Teams & Repos
           </button>
+        </div>
+      </div>
+
+      {/* Fleet Data Health & Sync Completeness Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div
+          onClick={() => setSyncFilter(syncFilter === 'synced' ? 'all' : 'synced')}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            syncFilter === 'synced'
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 ring-2 ring-emerald-500/30'
+              : 'glass-card border-white/[0.08] hover:border-emerald-500/40'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300">Live & Synced Repos</span>
+            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              100% LIVE
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono mt-1">
+            {syncedReposCount}
+            <span className="text-xs text-slate-400 font-normal ml-1">/ {repositories.length} repos</span>
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Commits, contributors & telemetry 100% active. Click to view only these.
+          </div>
+        </div>
+
+        <div
+          onClick={() => setSyncFilter(syncFilter === 'pending' ? 'all' : 'pending')}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            syncFilter === 'pending'
+              ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 ring-2 ring-amber-500/30'
+              : 'glass-card border-white/[0.08] hover:border-amber-500/40'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300">Pending Commits Sync</span>
+            <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              0 Commits Synced
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono mt-1">
+            {pendingReposCount}
+            <span className="text-xs text-slate-400 font-normal ml-1">/ {repositories.length} repos</span>
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Awaiting commit sync (GitHub rate limit window). Click to isolate.
+          </div>
+        </div>
+
+        <div
+          onClick={() => setSyncFilter('all')}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            syncFilter === 'all'
+              ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300 ring-2 ring-indigo-500/30'
+              : 'glass-card border-white/[0.08] hover:border-indigo-500/40'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300">Fleet Data Completeness</span>
+            <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+              {repositories.length > 0 ? Math.round((syncedReposCount / repositories.length) * 100) : 0}% Synced
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-1">
+            {repositories.length}
+            <span className="text-xs text-slate-400 font-normal ml-1">Total Repositories</span>
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Showing {filteredRepos.length} repos with current filters. Click to reset.
+          </div>
         </div>
       </div>
 
@@ -562,6 +711,58 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
           </div>
         </div>
       </div>
+
+      {/* 404 Invalid Repositories Warning Banner */}
+      {invalidReposList.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-3 animate-in fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-rose-300">
+                  {invalidReposList.length} Repositories Not Found on GitHub (404 / Deleted)
+                </h4>
+                <p className="text-xs text-rose-200/80 mt-0.5">
+                  These URLs returned 404 from GitHub. The repo might be deleted, private, or mistyped.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCleanup404}
+              disabled={isCleaning404}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{isCleaning404 ? 'Cleaning Up...' : 'Purge All 404 Repos'}</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1 border-t border-rose-500/20">
+            {invalidReposList.map((r) => (
+              <span
+                key={r.id || r.fullName}
+                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-mono bg-rose-950/80 border border-rose-500/40 text-rose-300"
+              >
+                <span>{r.fullName}</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/30 text-rose-200 uppercase font-bold">404</span>
+                <button
+                  onClick={() => {
+                    setRepoToDelete(r)
+                    setDeleteError(null)
+                  }}
+                  className="p-0.5 text-rose-400 hover:text-white transition-colors"
+                  title="Delete this repository"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Empty State or Repository List */}
       {filteredRepos.length === 0 ? (
@@ -780,6 +981,34 @@ AI-Dynamo, https://github.com/tailwindlabs/tailwindcss`
                       >
                         {repo.name}
                       </Link>
+
+                      {/* Sync Telemetry Status Badge */}
+                      <div className="flex items-center gap-1.5 mt-2">
+                        {(repo.commitsCount || repo.commits || 0) > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Live • {repo.commitsCount || repo.commits} Commits
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              Commits Pending
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleSyncRepo(repo.fullName)
+                              }}
+                              disabled={syncingRepoName === repo.fullName}
+                              className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 transition-colors"
+                            >
+                              {syncingRepoName === repo.fullName ? 'Syncing...' : 'Sync'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Health score badge */}

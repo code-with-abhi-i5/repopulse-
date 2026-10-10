@@ -118,7 +118,7 @@ export default function LandingPage() {
   }, [simulatedToast])
 
   const handleLaunch = () => {
-    setDemoMode(true)
+    setDemoMode(false)
     navigate('/dashboard')
   }
 
